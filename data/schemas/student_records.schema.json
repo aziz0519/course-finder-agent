@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://course-finder-agent.local/schemas/student_records.schema.json",
+  "title": "Synthetic student records (source shape)",
+  "description": "Structural schema for the supplied student-records.json. Cross-record rules (unique IDs, programme and course references, term consistency, completed/enrolled conflicts) are enforced by scripts/validate_datasets.py.",
+  "type": "object",
+  "required": ["students"],
+  "properties": {
+    "students": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/student" }
+    }
+  },
+  "additionalProperties": true,
+  "$defs": {
+    "courseCode": {
+      "type": "string",
+      "pattern": "^[A-Z]{2,5} [0-9]{3}$"
+    },
+    "term": {
+      "type": "string",
+      "pattern": "^(Fall|Spring|Summer|Winter) [0-9]{4}$"
+    },
+    "courseRecord": {
+      "type": "object",
+      "required": ["course_code", "term"],
+      "properties": {
+        "course_code": { "$ref": "#/$defs/courseCode" },
+        "term": { "$ref": "#/$defs/term" }
+      }
+    },
+    "student": {
+      "type": "object",
+      "required": [
+        "student_id",
+        "academic_level",
+        "program_id",
+        "adviser_id",
+        "completed_courses",
+        "enrolled_courses"
+      ],
+      "properties": {
+        "student_id": { "type": "string", "minLength": 1 },
+        "academic_level": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Descriptive only. Never derived from completed units."
+        },
+        "program_id": { "type": "string", "minLength": 1 },
+        "adviser_id": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Opaque assignment reference. No adviser directory is supplied."
+        },
+        "completed_courses": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/courseRecord" }
+        },
+        "enrolled_courses": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/courseRecord" },
+          "description": "Current-term records. Never treated as completed credit."
+        }
+      }
+    }
+  }
+}

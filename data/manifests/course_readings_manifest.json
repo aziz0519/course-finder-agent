@@ -1,0 +1,54 @@
+{
+  "manifest_version": 3,
+  "path_base": "data_root",
+  "scenario_current_term": "Fall 2026",
+  "scenario_next_term": "Spring 2027",
+  "documents_expected": 5,
+  "documents_present": 0,
+  "notes": [
+    "relative_path is resolved against DATA_ROOT (./data). Catalogue materials[].file is resolved against the dataset root (./data/samples), because that is how the catalogue declares it.",
+    "No PDF bytes are present in this repository yet. Entries carry expected_* values from the earlier preflight; they are verified against the real file on arrival and then promoted to sha256/page_count.",
+    "Original PDFs are excluded from version control by .gitignore; presence and integrity are proven by this manifest."
+  ],
+  "documents": [
+    {
+      "course_code": "PHYS 230",
+      "title": "Critical mass",
+      "week": 6,
+      "relative_path": "samples/course-materials/phys230-critical-mass.pdf",
+      "status": "pending",
+      "expected_sha256": "9cc30f28212b81a3886bb418511630c932ddab8a7150015d95b2ee86941f6539",
+      "expected_size_bytes": 622217,
+      "expected_page_count": 11,
+      "preflight_note": "Structural and visual preflight was completed on 2026-11-13: 11 pages, born-digital with a usable text layer, figures on pages 1/5/9/10, tables on 6/9/11, displayed equations on page 7. The file bytes are not in this repository, so these remain expected values until re-verified."
+    },
+    {
+      "course_code": "PHYS 350",
+      "title": "Bohr model",
+      "week": 2,
+      "relative_path": "samples/course-materials/phys350-bohr-model.pdf",
+      "status": "pending"
+    },
+    {
+      "course_code": "ENGL 120",
+      "title": "The Raven",
+      "week": 4,
+      "relative_path": "samples/course-materials/engl120-the-raven.pdf",
+      "status": "pending"
+    },
+    {
+      "course_code": "HIST 210",
+      "title": "Niels Bohr",
+      "week": 11,
+      "relative_path": "samples/course-materials/hist210-niels-bohr.pdf",
+      "status": "pending"
+    },
+    {
+      "course_code": "HIST 250",
+      "title": "Demon core",
+      "week": 9,
+      "relative_path": "samples/course-materials/hist250-demon-core.pdf",
+      "status": "pending"
+    }
+  ]
+}

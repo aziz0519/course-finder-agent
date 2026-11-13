@@ -1,0 +1,51 @@
+# --- Secrets and local configuration -------------------------------------------------
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# --- Python --------------------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+coverage.xml
+htmlcov/
+dist/
+build/
+
+# --- Node (only if a Next.js frontend is chosen later) -------------------------------
+node_modules/
+.next/
+out/
+
+# --- AWS CDK -------------------------------------------------------------------------
+cdk.out/
+.cdk.staging/
+infra/**/*.egg-info/
+
+# --- Data boundary -------------------------------------------------------------------
+# Original course PDFs are supplied artefacts, not source. Reproducibility comes from
+# data/manifests/course_readings_manifest.json (checksum + page count), not from git.
+data/samples/course-materials/*.pdf
+!data/samples/course-materials/.gitkeep
+
+# Derived artefacts: page renders, crops, parsed JSON, embeddings, QA reports.
+data/processed/*
+!data/processed/.gitkeep
+
+# Admin upload staging; never commit private data.
+data/incoming/*
+!data/incoming/.gitkeep
+
+# --- OS / editor ---------------------------------------------------------------------
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

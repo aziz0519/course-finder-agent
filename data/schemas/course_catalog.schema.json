@@ -1,0 +1,128 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://course-finder-agent.local/schemas/course_catalog.schema.json",
+  "title": "Course catalogue and degree requirements (source shape)",
+  "description": "Structural schema for the supplied course-catalog.json. Cross-record rules (uniqueness, referential integrity, unit policy, requirement counts) are enforced by scripts/validate_datasets.py, not by this schema alone.",
+  "type": "object",
+  "required": ["current_term", "next_term", "policies", "courses", "programs"],
+  "properties": {
+    "current_term": { "$ref": "#/$defs/term" },
+    "next_term": { "$ref": "#/$defs/term" },
+    "policies": {
+      "type": "object",
+      "required": ["max_units_per_term"],
+      "properties": {
+        "max_units_per_term": { "type": "integer", "minimum": 1, "maximum": 40 }
+      }
+    },
+    "courses": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/course" }
+    },
+    "programs": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/program" }
+    }
+  },
+  "additionalProperties": true,
+  "$defs": {
+    "term": {
+      "type": "string",
+      "pattern": "^(Fall|Spring|Summer|Winter) [0-9]{4}$",
+      "description": "Scenario term such as 'Fall 2026'."
+    },
+    "termSeason": {
+      "type": "string",
+      "pattern": "^(Fall|Spring|Summer|Winter)( [0-9]{4})?$",
+      "description": "Offering season, optionally year-qualified. Season alone is the expected form."
+    },
+    "courseCode": {
+      "type": "string",
+      "pattern": "^[A-Z]{2,5} [0-9]{3}$",
+      "description": "Canonical course code such as 'PHYS 230'."
+    },
+    "course": {
+      "type": "object",
+      "required": ["course_code", "title", "units", "prerequisites", "terms_offered"],
+      "properties": {
+        "course_code": { "$ref": "#/$defs/courseCode" },
+        "title": { "type": "string", "minLength": 1 },
+        "units": { "type": "integer", "minimum": 1 },
+        "description": { "type": ["string", "null"] },
+        "prerequisites": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/courseCode" },
+          "description": "Must be present. An empty array means no prerequisites; absence is rejected rather than inferred."
+        },
+        "terms_offered": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/termSeason" }
+        },
+        "materials": {
+          "type": ["array", "null"],
+          "items": { "$ref": "#/$defs/material" }
+        }
+      }
+    },
+    "material": {
+      "type": "object",
+      "required": ["title", "file"],
+      "properties": {
+        "title": { "type": "string", "minLength": 1 },
+        "week": { "type": ["integer", "null"], "minimum": 1 },
+        "file": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Path relative to the dataset root. Must resolve inside data/samples/."
+        }
+      }
+    },
+    "program": {
+      "type": "object",
+      "required": ["program_id", "name"],
+      "anyOf": [
+        { "required": ["requirement_groups"] },
+        { "required": ["requirements"] }
+      ],
+      "properties": {
+        "program_id": { "type": "string", "minLength": 1 },
+        "name": { "type": "string", "minLength": 1 },
+        "requirement_groups": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/requirementGroup" }
+        },
+        "requirements": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/requirementGroup" },
+          "description": "Accepted alias for requirement_groups so the adapter can normalize either key."
+        }
+      }
+    },
+    "requirementGroup": {
+      "type": "object",
+      "required": ["requirement_id", "name", "rule", "courses"],
+      "properties": {
+        "requirement_id": { "type": "string", "minLength": 1 },
+        "name": { "type": "string", "minLength": 1 },
+        "rule": { "type": "string", "enum": ["all", "choose"] },
+        "courses": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/courseCode" }
+        },
+        "count": { "type": ["integer", "null"], "minimum": 1 }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "rule": { "const": "choose" } }, "required": ["rule"] },
+          "then": { "required": ["count"] }
+        }
+      ]
+    }
+  }
+}
