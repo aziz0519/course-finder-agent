@@ -4,7 +4,7 @@
 **Validation result:** PASS for the supplied catalogue and student JSON fixtures; PARTIAL PASS for the first PDF preflight  
 **Scope limitation:** 1 of 5 catalogue-referenced PDFs is present and has passed initial structural/visual preflight. The other four PDF bytes remain outstanding, so full-corpus ingestion and material-reference existence checks are not complete.
 
-> **Repository state (2026-11-13, MVP scaffold):** the fixtures described below are not present in this checkout yet. `data/manifests/course_readings_manifest.json` therefore marks all five readings `pending` and keeps the PHYS 230 values as `expected_*` until the bytes are supplied and re-verified with `scripts/validate_datasets.py`. Read the PASS results below as the original preflight record, not as a live validation of the current working tree.
+> **Re-verified (2026-11-13, after the fixtures were added):** the supplied bytes now match this report. `scripts/validate_datasets.py` reports 38 passed, 0 warnings, 0 errors, 0 pending; the PHYS 230 `sha256` (`9cc30f28…`) and its 11-page count match the preflight above, and the manifest now records measured values for all five readings. The scope limitation still stands: only PHYS 230 has a completed visual preflight, and no full ingestion has been run.
 
 ## Files checked
 

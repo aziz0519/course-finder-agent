@@ -4,11 +4,11 @@ The catalogue references five PDFs. Copy them here using exactly these filenames
 
 | Course | Reading | Filename | Status |
 |---|---|---|---|
-| PHYS 230 | Critical mass | `phys230-critical-mass.pdf` | **expected** — `sha256` `9cc30f28212b81a3886bb418511630c932ddab8a7150015d95b2ee86941f6539`, 11 pages |
-| PHYS 350 | Bohr model | `phys350-bohr-model.pdf` | pending |
-| ENGL 120 | The Raven | `engl120-the-raven.pdf` | pending |
-| HIST 210 | Niels Bohr | `hist210-niels-bohr.pdf` | pending |
-| HIST 250 | Demon core | `hist250-demon-core.pdf` | pending |
+| PHYS 230 | Critical mass | `phys230-critical-mass.pdf` | ✅ present — `sha256` `9cc30f28…`, 11 pages, preflight complete |
+| PHYS 350 | Bohr model | `phys350-bohr-model.pdf` | ✅ present — 12 pages |
+| ENGL 120 | The Raven | `engl120-the-raven.pdf` | ✅ present — 15 pages |
+| HIST 210 | Niels Bohr | `hist210-niels-bohr.pdf` | ✅ present — 17 pages |
+| HIST 250 | Demon core | `hist250-demon-core.pdf` | ✅ present — 9 pages |
 
 Notes:
 
