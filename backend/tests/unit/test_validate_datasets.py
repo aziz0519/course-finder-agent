@@ -49,6 +49,25 @@ def test_existing_declaration_wins_over_its_sibling_root(tmp_path: Path) -> None
     )
 
 
+def test_schemas_fall_back_to_the_repository_copy(tmp_path: Path) -> None:
+    data_root = tmp_path / "data"
+    data_root.mkdir()
+
+    resolved = validator.resolve_schema_path(validator.CATALOGUE_SCHEMA_NAME, data_root)
+
+    assert resolved.is_file()
+    assert resolved.parent == validator.REPO_ROOT / "data" / "schemas"
+
+
+def test_dataset_local_schema_overrides_the_repository_copy(tmp_path: Path) -> None:
+    data_root = tmp_path / "data"
+    (data_root / "schemas").mkdir(parents=True)
+    local = data_root / "schemas" / validator.CATALOGUE_SCHEMA_NAME
+    local.write_text("{}", encoding="utf-8")
+
+    assert validator.resolve_schema_path(validator.CATALOGUE_SCHEMA_NAME, data_root) == local
+
+
 def test_missing_inputs_report_partial_and_do_not_fail(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:

@@ -41,8 +41,8 @@ Severity = Literal["ok", "warn", "error", "pending"]
 
 CATALOGUE_REL = Path("samples/course-catalog.json")
 STUDENTS_REL = Path("samples/student-records.json")
-CATALOGUE_SCHEMA_REL = Path("schemas/course_catalog.schema.json")
-STUDENTS_SCHEMA_REL = Path("schemas/student_records.schema.json")
+CATALOGUE_SCHEMA_NAME = "course_catalog.schema.json"
+STUDENTS_SCHEMA_NAME = "student_records.schema.json"
 MANIFEST_REL = Path("manifests/course_readings_manifest.json")
 
 EXPECTED_COURSE_COUNT = 14
@@ -151,6 +151,12 @@ def resolve_input_path(declared: str, data_root: Path, base: str = "auto") -> Pa
         if candidate.exists():
             return candidate
     return candidates[0]
+
+
+def resolve_schema_path(filename: str, data_root: Path) -> Path:
+    """Schemas are versioned project code; a dataset-local copy may override them."""
+    local = data_root / "schemas" / filename
+    return local if local.is_file() else REPO_ROOT / "data" / "schemas" / filename
 
 
 def pdf_page_count(path: Path) -> int | None:
@@ -665,11 +671,21 @@ def main(argv: list[str] | None = None) -> int:
     program_ids: set[str] = set()
 
     if catalogue is not None:
-        validate_schema(report, catalogue, data_root / CATALOGUE_SCHEMA_REL, "Course catalogue")
+        validate_schema(
+            report,
+            catalogue,
+            resolve_schema_path(CATALOGUE_SCHEMA_NAME, data_root),
+            "Course catalogue",
+        )
         course_codes, program_ids = validate_catalogue(report, catalogue, data_root)
 
     if students is not None:
-        validate_schema(report, students, data_root / STUDENTS_SCHEMA_REL, "Student records")
+        validate_schema(
+            report,
+            students,
+            resolve_schema_path(STUDENTS_SCHEMA_NAME, data_root),
+            "Student records",
+        )
         current_term = EXPECTED_CURRENT_TERM
         if isinstance(catalogue, dict) and isinstance(catalogue.get("current_term"), str):
             current_term = catalogue["current_term"]
