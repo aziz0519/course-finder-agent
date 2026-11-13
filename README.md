@@ -13,8 +13,8 @@ assistant says so instead of guessing.
 | Milestone | Scope | State |
 |---|---|---|
 | **M0** | Repo scaffold, typed settings, dataset contract, Phase 0 validator | ✅ **complete** (2026-11-13) |
-| **M1** | Deterministic domain core: adapters, prerequisite eligibility, degree progress | next |
-| M2 | Reading ingestion and course-scoped retrieval with page citations | |
+| **M1** | Deterministic domain core: adapters, prerequisite eligibility, degree progress | ✅ **complete** (2026-11-13) |
+| M2 | Reading ingestion and course-scoped retrieval with page citations | next |
 | M3 | Conversation state, supervisor routing, tutor and planner | |
 | M4 | API, local auth, RBAC and negative security tests | |
 | M5 | UI (Gradio over the API is the recommendation; Next.js remains supported) | |
@@ -35,7 +35,7 @@ assistant says so instead of guessing.
 | Student fixtures validate | 2 records, unique IDs, references resolve, enrolled terms equal Fall 2026, no completed/enrolled conflict | ✅ |
 | Validator fails closed on bad data | A deliberately corrupted copy produced 6 expected failures (bad prerequisite, unsupported rule, out-of-bounds `count`, duplicate ID, completed∩enrolled overlap, wrong enrolment term) | ✅ |
 | Quality gates green | `ruff` clean, `mypy` clean (14 files), `pytest` 17 passed | ✅ |
-| Dataset report | `validate_datasets.py` → 38 passed, 0 warnings, 0 errors, 0 pending; `--require-complete` exits `0` | ✅ |
+| Dataset report | `validate_datasets.py` → 39 passed, 0 warnings, 0 errors, 0 pending; `--require-complete` exits `0` | ✅ |
 
 M0 deliberately stops at the data boundary. It contains **no** prerequisite engine, no
 PDF ingestion, no API, and no cloud resources — those are M1–M6.
@@ -45,7 +45,7 @@ PDF ingestion, no API, and no cloud resources — those are M1–M6.
 ```bash
 uv sync --all-groups          # creates .venv with Python 3.12
 cp .env.example .env          # placeholders only; safe for local development
-make validate                 # 38 checks against the supplied fixtures
+make validate                 # 39 checks against the supplied fixtures
 make check                    # lint + typecheck + tests
 ```
 
@@ -72,9 +72,10 @@ Two facts about the fixtures worth recording:
 - The programme uses the `requirements` key rather than `requirement_groups`. Both are
   accepted by the schema and the validator; the M1 adapter normalises to
   `RequirementGroup`.
-- `policies.in_progress_prerequisites` is currently a human-readable sentence. M1 must
-  convert it into an explicit typed rule — a catalogue string is documentation, not an
-  executable policy.
+- `policies.in_progress_prerequisites` is a human-readable sentence in the source. M1
+  converts it into an explicit typed rule (`InProgressPrerequisitePolicy`) and refuses to
+  guess if the wording changes — a catalogue string is documentation, not an executable
+  policy.
 
 ## Repository layout
 
@@ -134,29 +135,51 @@ These are not negotiable, and every milestone preserves them:
 7. Restricted nuclear-content chunks are excluded from student-facing retrieval rather
    than relying on prompt wording alone.
 
-## Next: M1 — deterministic domain core
+## M1 exit gate — confirmed
 
-Scope is fixed and needs no model provider, database, or UI:
+M1 is pure deterministic Python: no model provider, no database, no UI, no network.
 
-1. Canonical Pydantic models: `Course`, `Program`, `RequirementGroup`, `AcademicPolicy`,
-   `Student`, `ReadingDocument`.
-2. Source adapters for the two supplied files, preserving the raw JSON and source version.
-3. `AcademicPolicy` type that encodes the in-progress prerequisite rule explicitly.
-4. Prerequisite evaluator: `completed ∪ in-progress` for the next term, never treating
-   concurrently-planned courses as satisfying one another.
-5. Term filter, completed/enrolled exclusion, and the 16-unit cap.
-6. Degree progress per `all` / `choose` group with `satisfied | in_progress | remaining |
-   unable_to_determine`.
-
-Exit criteria are golden tests, fixed from the current fixtures:
-
-| Student | Eligible Spring 2027 candidates | Notes |
+| Criterion | Evidence | Result |
 |---|---|---|
-| `student-001` | PHYS 110, MATH 150, PHYS 340, ENGL 130 | 12-unit core plan = 110 + 150 + 340; 8-unit plan = 110 + 150 with 340 deferred, not ineligible |
-| `student-002` | PHYS 110, MATH 150, ENGL 130, HIST 210 | PHYS 340 must be **absent**: PHYS 230 is neither completed nor in progress |
+| Canonical models exist and self-validate | `Course`, `Program`, `RequirementGroup`, `AcademicPolicy`, `Student`, `ReadingDocument`, `Term` — frozen, `extra="forbid"` | ✅ |
+| Source adapters preserve provenance and fail closed | Raw JSON kept in `SourceDocument` with SHA-256; unknown rules, missing `prerequisites`, dangling references, bad terms, and path traversal all raise instead of defaulting | ✅ |
+| In-progress prerequisite rule is typed, not prose | `InProgressPrerequisitePolicy`; absent or unrecognised statement yields `allowed=False`, or `PolicyError` | ✅ |
+| Next-term-only prerequisite scope | `allows_in_progress_prerequisites_for()` returns true for `Spring 2027` only | ✅ |
+| Golden eligibility for `student-001` | PHYS 110, MATH 150, PHYS 340, ENGL 130 | ✅ |
+| Golden eligibility for `student-002` | PHYS 110, MATH 150, ENGL 130, HIST 210; PHYS 340 absent | ✅ |
+| Never recommended | PHYS 120, PHYS 490 for Spring 2027; Fall-only PHYS 230/330/350 and HIST 250 excluded by term | ✅ |
+| Unit cap enforced, never mutated | 12-unit plan = 110 + 150 + 340; 8-unit plan = 110 + 150 with 340 `deferred` and still `eligible`; request caps never touch catalogue policy | ✅ |
+| No filler courses | In-progress ENGL 120 suppresses ENGL 130 as a recommendation; it stays an alternative | ✅ |
+| In-progress is not completed credit | `calculate_degree_progress` reports `in_progress`; `satisfied_by` only ever contains completed courses | ✅ |
+| Quality gates green | `ruff` clean, `mypy` clean (23 files), `pytest` 112 passed | ✅ |
+| Validator includes the runtime model | `validate_datasets.py` now builds the canonical model too → 39 passed | ✅ |
 
-PHYS 120 and PHYS 490 must never be recommended for Spring 2027, and HIST 250 / PHYS 230
-are not Spring offerings.
+Test coverage by area: term ordering (9), adapters (27), eligibility (17), degree progress
+(11), planning (19), fixture loading (12), settings/validator (17).
+
+Two test expectations were corrected during M1 because the code was right:
+
+- **Term ordering is calendar order.** `Spring 2026 < Fall 2026`, even though the strings
+  sort the other way. `Term.sort_key` is `(year, season_index)`, so `Fall 2025 < Spring
+  2026` and the "completed before current term" rule holds.
+- **One in-progress elective is not on track.** `student-001` has 1 of 2 physics electives
+  covered by PHYS 350, so `physics-electives` is `remaining` with `courses_short=1` —
+  not `in_progress`. A choose-group only becomes `in_progress` once its count is covered.
+
+## Next: M2 — reading ingestion and retrieval
+
+Scope: Docling-based layout extraction for all five PDFs, page-level provenance, versioned
+activation, and course-scoped retrieval with citations. Nothing here may be replaced by
+model knowledge.
+
+Exit criteria:
+
+1. Page coverage matches each source PDF; every page has an extraction status.
+2. Figures, tables, and displayed equations get crops plus page/region provenance, with
+   `needs_review` where extraction is uncertain.
+3. Reading answers cite document title and 1-based PDF page; unreadable content produces an
+   abstention.
+4. Restricted nuclear-content chunks are classified and excluded from student retrieval.
 
 ## Open decisions
 

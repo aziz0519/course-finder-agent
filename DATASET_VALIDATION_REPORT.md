@@ -2,9 +2,9 @@
 
 **Scenario:** Fall 2026 → Spring 2027  
 **Validation result:** PASS for the supplied catalogue and student JSON fixtures; PARTIAL PASS for the first PDF preflight  
-**Scope limitation:** 1 of 5 catalogue-referenced PDFs is present and has passed initial structural/visual preflight. The other four PDF bytes remain outstanding, so full-corpus ingestion and material-reference existence checks are not complete.
+**Scope note:** this report was produced when only the PHYS 230 PDF had been supplied. All five PDFs are now present; the re-verification note below records the current state.
 
-> **Re-verified (2026-11-13, after the fixtures were added):** the supplied bytes now match this report. `scripts/validate_datasets.py` reports 38 passed, 0 warnings, 0 errors, 0 pending; the PHYS 230 `sha256` (`9cc30f28…`) and its 11-page count match the preflight above, and the manifest now records measured values for all five readings. The scope limitation still stands: only PHYS 230 has a completed visual preflight, and no full ingestion has been run.
+> **Re-verified (2026-11-13, after the fixtures were added):** the supplied bytes now match this report, and the corpus is complete. `scripts/validate_datasets.py` reports 39 passed, 0 warnings, 0 errors, 0 pending; all five reading checksums and page counts match the manifest; the PHYS 230 `sha256` (`9cc30f28…`) and its 11-page count match the preflight above. The validator now also builds the canonical domain model (14 courses, 1 programme, 5 readings, 2 students) so a file that satisfies the schema but not the runtime adapter is a hard failure. The remaining limitation is that only PHYS 230 has a completed *visual* preflight, and no full ingestion has been run.
 
 ## Files checked
 

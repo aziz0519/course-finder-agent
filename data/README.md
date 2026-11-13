@@ -26,7 +26,7 @@ root, and reports the exact path it looked for.
 
 ## Source files supplied
 
-All expected inputs are present and validated on 2026-11-13 (38 checks, 0 warnings).
+All expected inputs are present and validated on 2026-11-13 (39 checks, 0 warnings).
 
 | File | Content | Status |
 |---|---|---|
