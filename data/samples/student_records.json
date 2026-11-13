@@ -1,0 +1,30 @@
+{
+  "students": [
+    {
+      "student_id": "student-001",
+      "academic_level": "Sophomore",
+      "program_id": "bachelor-of-science-physics",
+      "adviser_id": "adviser-001",
+      "completed_courses": [
+        { "course_code": "PHYS 230", "term": "Fall 2025" },
+        { "course_code": "HIST 250", "term": "Fall 2025" }
+      ],
+      "enrolled_courses": [
+        { "course_code": "PHYS 350", "term": "Fall 2026" },
+        { "course_code": "HIST 210", "term": "Fall 2026" },
+        { "course_code": "ENGL 120", "term": "Fall 2026" }
+      ]
+    },
+    {
+      "student_id": "student-002",
+      "academic_level": "Freshman",
+      "program_id": "bachelor-of-science-physics",
+      "adviser_id": "adviser-002",
+      "completed_courses": [],
+      "enrolled_courses": [
+        { "course_code": "HIST 250", "term": "Fall 2026" },
+        { "course_code": "ENGL 120", "term": "Fall 2026" }
+      ]
+    }
+  ]
+}

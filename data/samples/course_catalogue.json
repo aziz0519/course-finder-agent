@@ -1,0 +1,187 @@
+{
+  "current_term": "Fall 2026",
+  "next_term": "Spring 2027",
+  "policies": {
+    "max_units_per_term": 16,
+    "in_progress_prerequisites": "A course in progress counts toward the prerequisites of courses in the following term."
+  },
+  "courses": [
+    {
+      "course_code": "PHYS 110",
+      "title": "Mechanics",
+      "units": 4,
+      "description": "Motion, forces, energy, momentum, rotation, and oscillations.",
+      "prerequisites": [],
+      "terms_offered": ["Fall", "Spring"],
+      "materials": null
+    },
+    {
+      "course_code": "PHYS 120",
+      "title": "Electricity and Magnetism",
+      "units": 4,
+      "description": "Electric fields, circuits, magnetic fields, induction, and electromagnetic waves.",
+      "prerequisites": ["PHYS 110", "MATH 150"],
+      "terms_offered": ["Fall", "Spring"],
+      "materials": null
+    },
+    {
+      "course_code": "PHYS 230",
+      "title": "Modern Physics",
+      "units": 4,
+      "description": "Special relativity, radioactivity, nuclear structure, fission, and criticality. Open to students with high-school physics.",
+      "prerequisites": [],
+      "terms_offered": ["Fall"],
+      "materials": [
+        { "title": "Critical mass", "week": 6, "file": "course-materials/phys230-critical-mass.pdf" }
+      ]
+    },
+    {
+      "course_code": "PHYS 320",
+      "title": "Thermal Physics",
+      "units": 4,
+      "description": "Temperature, heat, entropy, the laws of thermodynamics, and an introduction to statistical mechanics.",
+      "prerequisites": ["PHYS 120"],
+      "terms_offered": ["Fall", "Spring"],
+      "materials": null
+    },
+    {
+      "course_code": "PHYS 330",
+      "title": "Astrophysics",
+      "units": 4,
+      "description": "Stellar structure and evolution, nucleosynthesis, galaxies, and cosmology.",
+      "prerequisites": ["PHYS 230"],
+      "terms_offered": ["Fall"],
+      "materials": null
+    },
+    {
+      "course_code": "PHYS 340",
+      "title": "Radiation and Health Physics",
+      "units": 4,
+      "description": "Interaction of radiation with matter, dosimetry, biological effects of radiation, and radiation protection.",
+      "prerequisites": ["PHYS 230"],
+      "terms_offered": ["Spring"],
+      "materials": null
+    },
+    {
+      "course_code": "PHYS 350",
+      "title": "Quantum Mechanics",
+      "units": 4,
+      "description": "Early quantum theory and the Bohr model, wave functions, the Schrödinger equation, operators, and the hydrogen atom.",
+      "prerequisites": ["PHYS 230"],
+      "terms_offered": ["Fall"],
+      "materials": [
+        { "title": "Bohr model", "week": 2, "file": "course-materials/phys350-bohr-model.pdf" }
+      ]
+    },
+    {
+      "course_code": "PHYS 490",
+      "title": "Senior Research Project",
+      "units": 4,
+      "description": "An independent research project supervised by a faculty member, ending in a written report and a talk.",
+      "prerequisites": ["PHYS 350", "PHYS 120"],
+      "terms_offered": ["Spring"],
+      "materials": null
+    },
+    {
+      "course_code": "MATH 150",
+      "title": "Calculus I",
+      "units": 4,
+      "description": "Limits, derivatives and their applications, and an introduction to integration.",
+      "prerequisites": [],
+      "terms_offered": ["Fall", "Spring"],
+      "materials": null
+    },
+    {
+      "course_code": "MATH 160",
+      "title": "Calculus II",
+      "units": 4,
+      "description": "Techniques and applications of integration, sequences, series, and an introduction to differential equations.",
+      "prerequisites": ["MATH 150"],
+      "terms_offered": ["Fall", "Spring"],
+      "materials": null
+    },
+    {
+      "course_code": "ENGL 120",
+      "title": "Introduction to Poetry",
+      "units": 4,
+      "description": "Close reading of poems from several periods, with attention to form, meter, imagery, and voice.",
+      "prerequisites": [],
+      "terms_offered": ["Fall", "Spring"],
+      "materials": [
+        { "title": "The Raven", "week": 4, "file": "course-materials/engl120-the-raven.pdf" }
+      ]
+    },
+    {
+      "course_code": "ENGL 130",
+      "title": "The Novel",
+      "units": 4,
+      "description": "Major novels from the eighteenth century to the present and how the form has changed.",
+      "prerequisites": [],
+      "terms_offered": ["Fall", "Spring"],
+      "materials": null
+    },
+    {
+      "course_code": "HIST 210",
+      "title": "Modern Europe",
+      "units": 4,
+      "description": "European political, social, and cultural history from the French Revolution to the end of the Cold War.",
+      "prerequisites": [],
+      "terms_offered": ["Fall", "Spring"],
+      "materials": [
+        { "title": "Niels Bohr", "week": 11, "file": "course-materials/hist210-niels-bohr.pdf" }
+      ]
+    },
+    {
+      "course_code": "HIST 250",
+      "title": "The Atomic Age",
+      "units": 4,
+      "description": "The scientists, politics, and weapons of the nuclear age, from the quantum revolution through the early Cold War.",
+      "prerequisites": [],
+      "terms_offered": ["Fall"],
+      "materials": [
+        { "title": "Demon core", "week": 9, "file": "course-materials/hist250-demon-core.pdf" }
+      ]
+    }
+  ],
+  "programs": [
+    {
+      "program_id": "bachelor-of-science-physics",
+      "name": "Bachelor of Science in Physics",
+      "requirements": [
+        {
+          "requirement_id": "physics-core",
+          "name": "Physics core",
+          "rule": "all",
+          "courses": ["PHYS 110", "PHYS 120", "PHYS 230", "MATH 150", "MATH 160"]
+        },
+        {
+          "requirement_id": "physics-electives",
+          "name": "Physics electives",
+          "rule": "choose",
+          "count": 2,
+          "courses": ["PHYS 320", "PHYS 330", "PHYS 340", "PHYS 350"]
+        },
+        {
+          "requirement_id": "literature",
+          "name": "Literature",
+          "rule": "choose",
+          "count": 1,
+          "courses": ["ENGL 120", "ENGL 130"]
+        },
+        {
+          "requirement_id": "history",
+          "name": "History",
+          "rule": "choose",
+          "count": 1,
+          "courses": ["HIST 210", "HIST 250"]
+        },
+        {
+          "requirement_id": "capstone",
+          "name": "Capstone",
+          "rule": "all",
+          "courses": ["PHYS 490"]
+        }
+      ]
+    }
+  ]
+}
