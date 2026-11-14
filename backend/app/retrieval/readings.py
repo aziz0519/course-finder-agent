@@ -93,6 +93,19 @@ class Retriever(Protocol):
         chunk_id: str,
     ) -> Evidence: ...
 
+    def resolve_visual(
+        self,
+        scope: ReadingScope,
+        course_id: str,
+        document_id: str,
+        *,
+        asset_id: str | None = None,
+        page_number: int | None = None,
+        visual_type: VisualType | None = None,
+        label: str | None = None,
+        exact: bool = False,
+    ) -> VisualResult: ...
+
 
 VISUAL_QUERY = re.compile(
     r"\b(diagram|figure|chart|table|equation|formula|graph|plot|image)\b", re.IGNORECASE
@@ -275,6 +288,7 @@ class LocalRetriever:
         asset_id: str | None = None,
         page_number: int | None = None,
         visual_type: VisualType | None = None,
+        label: str | None = None,
         exact: bool = False,
     ) -> VisualResult:
         """Use a thread's explicit document/asset antecedent; never search other documents."""
@@ -290,6 +304,7 @@ class LocalRetriever:
             and (asset_id is None or asset.asset_id == asset_id)
             and (page_number is None or asset.pdf_page_number == page_number)
             and (visual_type is None or asset.visual_type == visual_type)
+            and (label is None or (asset.label and asset.label.casefold() == label.casefold()))
         ]
         if len(matches) > 1:
             return VisualResult(
