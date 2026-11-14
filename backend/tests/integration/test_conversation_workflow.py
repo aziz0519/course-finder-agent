@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+
 from app.ingestion.dataset import AcademicDataset
 from app.ingestion.readings import ingest_reading, load_reviews
 from app.repositories.conversations import ConversationRepository
@@ -62,8 +64,7 @@ def test_planner_cap_is_recomputed_and_persisted(dataset: AcademicDataset, tmp_p
     assert all(item.source_version for item in first.planning.evidence)
     assert len(first.trace_ids) == 2
     assert {
-        run.trace.agent_name
-        for run in service.repository.agent_runs(thread.thread_id, "user-001")
+        run.trace.agent_name for run in service.repository.agent_runs(thread.thread_id, "user-001")
     } == {"supervisor", "planner"}
 
     second = service.handle_message(
@@ -111,7 +112,7 @@ def test_bohr_tutor_follow_up_uses_reviewed_visual(
     assert document is not None
     source = data_root / "samples" / "course-materials" / document.source_filename
     if not source.is_file():
-        return
+        pytest.skip("Optional Bohr model source PDF is unavailable")
     readings = ReadingRepository(tmp_path / "readings")
     reviews = load_reviews(data_root / "manifests" / "reading_qa.json")
     ingest_reading(
@@ -155,3 +156,14 @@ def test_bohr_tutor_follow_up_uses_reviewed_visual(
     assert "up to 8 electrons" in exact.text
     assert exact.citations[0].pdf_page_number == 4
     assert exact.citations[0].label == "Figure 2"
+
+
+@pytest.mark.parametrize("cap", [0, -8])
+def test_invalid_cap_clarifies_without_losing_preference(dataset, tmp_path, cap) -> None:
+    service = _service(dataset, tmp_path)
+    thread = service.create("user-001", "student-001")
+    scope = _scope(dataset)
+    service.handle_message(thread.thread_id, "user-001", scope, "Cap me at 12 units")
+    response = service.handle_message(thread.thread_id, "user-001", scope, f"Cap me at {cap} units")
+    assert response.status == "clarification_required"
+    assert service.repository.get(thread.thread_id, "user-001").state.planning_unit_cap == 12

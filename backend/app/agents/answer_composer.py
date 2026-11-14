@@ -33,7 +33,7 @@ class AnswerComposer(Protocol):
 class OfflineAnswerComposer:
     """Select the most question-relevant source sentences without adding model facts."""
 
-    _sentence = re.compile(r"(?<=[.!?])\s+|\n+")
+    _sentence = re.compile(r"(?<=[.!?])\s+")
 
     def compose(self, question: str, evidence: tuple[Evidence, ...]) -> ComposedAnswer:
         if not evidence:
@@ -53,7 +53,8 @@ class OfflineAnswerComposer:
             for position, sentence in enumerate(sentences):
                 sentence_tokens = set(re.findall(r"\w+", sentence.casefold(), re.UNICODE))
                 score = len(query_tokens & sentence_tokens)
-                ranked.append((-score, evidence_index, position, sentence[:1000]))
+                if len(sentence) <= 1000:
+                    ranked.append((-score, evidence_index, position, sentence))
         ranked.sort()
         has_positive_match = bool(ranked and ranked[0][0] < 0)
         claims: list[ComposedClaim] = []

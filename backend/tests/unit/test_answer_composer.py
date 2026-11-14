@@ -40,3 +40,14 @@ def test_offline_composer_is_bounded() -> None:
     source = evidence("One. Two. Three. Four. Five.", "chunk")
     result = OfflineAnswerComposer().compose("Explain this", (source,))
     assert len(result.claims) == 3
+
+
+def test_overlong_equation_is_omitted_without_truncation() -> None:
+    import pytest
+
+    expression = "Energy = " + " + ".join(["term"] * 160) + ", provided n > 0"
+    with pytest.raises(ValueError, match="no composable text"):
+        OfflineAnswerComposer().compose("Energy", (evidence(expression, "long"),))
+    short = "Energy = a + b + c, provided n > 0."
+    result = OfflineAnswerComposer().compose("Energy", (evidence(short, "short"),))
+    assert result.claims[0].text == short

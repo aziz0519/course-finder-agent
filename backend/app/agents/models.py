@@ -70,6 +70,7 @@ class ConversationState(DomainModel):
     active_document_id: str | None = None
     candidate_asset_ids: tuple[str, ...] = ()
     last_asset_id: str | None = None
+    pending_visual_exact: bool = False
 
 
 class TraceEvent(DomainModel):

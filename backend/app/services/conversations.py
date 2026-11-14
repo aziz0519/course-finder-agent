@@ -58,16 +58,24 @@ class ConversationService:
         if intent == "planner":
             cap = requested_unit_cap(message)
             effective_preference = cap if cap is not None else thread.state.planning_unit_cap
-            response = plan(
-                student,
-                dataset.catalog,
-                unit_cap=effective_preference,
-                catalogue_version=dataset.catalogue_source.source_version,
-                student_record_version=dataset.students_source.source_version,
-            )
-            state = thread.state.model_copy(
-                update={"last_intent": "planner", "planning_unit_cap": effective_preference}
-            )
+            if effective_preference is not None and effective_preference <= 0:
+                response = AgentResponse(
+                    status="clarification_required",
+                    intent="planner",
+                    text="Please specify a positive unit cap.",
+                )
+                state = thread.state.model_copy(update={"last_intent": "planner"})
+            else:
+                response = plan(
+                    student,
+                    dataset.catalog,
+                    unit_cap=effective_preference,
+                    catalogue_version=dataset.catalogue_source.source_version,
+                    student_record_version=dataset.students_source.source_version,
+                )
+                state = thread.state.model_copy(
+                    update={"last_intent": "planner", "planning_unit_cap": effective_preference}
+                )
         elif intent == "tutor":
             response, state = tutor(
                 message,

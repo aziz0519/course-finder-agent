@@ -7,8 +7,10 @@ import re
 from app.agents.models import ConversationState, Intent
 
 PLANNING = re.compile(
-    r"\b(spring 2027|academic plan|degree|course[s]? should|take in|unit[s]?"
-    r"|prerequisite|eligible|internship|cap me)\b",
+    r"\b(spring 2027|academic plan|course[s]? should|take in"
+    r"|prerequisite|eligible|internship|cap(?: me)?|keep it to)\b"
+    r"|\b(?:degree (?:progress|requirements?|plan)|(?:progress|towards?) .{0,30}degree"
+    r"|(?:plan|take|limit|maximum|fewer|reduce) .{0,30}units?)\b",
     re.IGNORECASE,
 )
 TUTOR = re.compile(
@@ -31,8 +33,12 @@ def route_intent(message: str, state: ConversationState) -> Intent:
         return "tutor"
     if state.last_intent == "planner" and re.search(r"\b(cap|units?|course)\b", message, re.I):
         return "planner"
-    if state.last_intent == "tutor" and state.active_document_id and re.search(
-        r"\b(it|that|this|source|page)\b", message, re.I
+    if state.last_intent == "tutor" and state.active_course_id and not state.active_document_id:
+        return "tutor"
+    if (
+        state.last_intent == "tutor"
+        and state.active_document_id
+        and re.search(r"\b(it|that|this|source|page)\b", message, re.I)
     ):
         return "tutor"
     return "unsupported"

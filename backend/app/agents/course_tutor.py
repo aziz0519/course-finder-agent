@@ -13,7 +13,7 @@ from app.retrieval.readings import Evidence, ReadingScope, Retriever
 
 COURSE_CODE = re.compile(r"\b[A-Z]{2,5}\s*\d{3}\b", re.I)
 PAGE = re.compile(r"\b(?:pdf\s+)?page\s+(\d+)\b", re.I)
-FIGURE = re.compile(r"\bfigure\s+(\d+)\b", re.I)
+FIGURE = re.compile(r"\bfigure\s+(\d+(?:\.\d+)*)(?=$|[\s,;:!?)\]]|\.(?:\s|$))", re.I)
 EXACT = re.compile(r"\b(how many|how much|exact|value|according to (?:its|the) label)\b", re.I)
 OPERATIONAL_NUCLEAR = re.compile(
     r"\b(?:calculate|derive|optimi[sz]e|design|build|construct|assemble)\b"
@@ -62,14 +62,6 @@ def _resolve_course(
         if catalog.maybe_course(course_id) and course_id in authorized_course_ids:
             return course_id, None
         return None, "That course is not in the authorized course context."
-    if (
-        state.active_course_id
-        and state.active_course_id in authorized_course_ids
-        and (
-        re.search(r"\b(that|this|it|the reading|figure|diagram|page)\b", message, re.I)
-        )
-    ):
-        return state.active_course_id, None
     lowered = message.lower()
     exact_matches = {
         document.course_id
@@ -78,6 +70,14 @@ def _resolve_course(
     }
     if len(exact_matches) == 1:
         return exact_matches.pop(), None
+    if len(exact_matches) > 1:
+        return None, "Which reading course do you mean?"
+    if (
+        state.active_course_id
+        and state.active_course_id in authorized_course_ids
+        and (re.search(r"\b(that|this|it|the reading|figure|diagram|page)\b", message, re.I))
+    ):
+        return state.active_course_id, None
     matches = {
         document.course_id
         for document in catalog.reading_documents
@@ -106,11 +106,26 @@ def _resolve_course(
 
 
 def _document_id(
-    course_id: str, state: ConversationState, catalog: AcademicCatalog
+    message: str,
+    course_id: str,
+    state: ConversationState,
+    catalog: AcademicCatalog,
+    authorized_document_ids: frozenset[str],
 ) -> str | None:
-    if state.active_course_id == course_id and state.active_document_id:
+    documents = tuple(
+        document_id
+        for document_id in catalog.course(course_id).reading_document_ids
+        if document_id in authorized_document_ids
+    )
+    matches = tuple(
+        document_id
+        for document_id in documents
+        if catalog.documents_by_id[document_id].title.casefold() in message.casefold()
+    )
+    if matches:
+        return matches[0] if len(matches) == 1 else None
+    if state.active_course_id == course_id and state.active_document_id in documents:
         return state.active_document_id
-    documents = catalog.course(course_id).reading_document_ids
     return documents[0] if len(documents) == 1 else None
 
 
@@ -137,9 +152,7 @@ def tutor(
             ),
             state.model_copy(update={"last_intent": "tutor"}),
         )
-    course_id, clarification = _resolve_course(
-        message, state, student, catalog, scope.course_ids
-    )
+    course_id, clarification = _resolve_course(message, state, student, catalog, scope.course_ids)
     if course_id is None:
         return (
             AgentResponse(
@@ -149,7 +162,7 @@ def tutor(
             ),
             state.model_copy(update={"last_intent": "tutor"}),
         )
-    document_id = _document_id(course_id, state, catalog)
+    document_id = _document_id(message, course_id, state, catalog, scope.document_ids)
     if document_id is None:
         return (
             AgentResponse(
@@ -164,6 +177,20 @@ def tutor(
     if visual_type:
         page_match = PAGE.search(message)
         figure_match = FIGURE.search(message)
+        if re.search(r"\bfigure\s+\S", message, re.I) and not figure_match:
+            return (
+                AgentResponse(
+                    status="clarification_required",
+                    intent="tutor",
+                    text="Please specify a supported numeric figure label, such as Figure 2.1.",
+                ),
+                state,
+            )
+        exact = bool(EXACT.search(message)) or (
+            state.pending_visual_exact
+            and state.active_course_id == course_id
+            and state.active_document_id == document_id
+        )
         visual_result = retriever.resolve_visual(
             scope,
             course_id,
@@ -171,7 +198,7 @@ def tutor(
             page_number=int(page_match.group(1)) if page_match else None,
             visual_type=visual_type,
             label=f"Figure {figure_match.group(1)}" if figure_match else None,
-            exact=bool(EXACT.search(message)),
+            exact=exact,
         )
         next_state = state.model_copy(
             update={
@@ -179,6 +206,7 @@ def tutor(
                 "active_course_id": course_id,
                 "active_document_id": document_id,
                 "candidate_asset_ids": visual_result.candidate_asset_ids,
+                "pending_visual_exact": exact,
             }
         )
         if visual_result.status == "clarification_required":
@@ -200,8 +228,10 @@ def tutor(
                 next_state,
             )
         asset = visual_result.evidence.asset
-        if figure_match and asset.label and asset.label.casefold() != (
-            f"Figure {figure_match.group(1)}".casefold()
+        if (
+            figure_match
+            and asset.label
+            and asset.label.casefold() != (f"Figure {figure_match.group(1)}".casefold())
         ):
             return (
                 AgentResponse(
@@ -218,8 +248,7 @@ def tutor(
                     status="insufficient_evidence",
                     intent="tutor",
                     text=(
-                        "The visual is approved, but no reviewed transcription "
-                        "supports an answer."
+                        "The visual is approved, but no reviewed transcription supports an answer."
                     ),
                 ),
                 next_state,
@@ -246,17 +275,23 @@ def tutor(
         return (
             response,
             next_state.model_copy(
-                update={"last_asset_id": asset.asset_id, "candidate_asset_ids": ()}
+                update={
+                    "last_asset_id": asset.asset_id,
+                    "candidate_asset_ids": (),
+                    "pending_visual_exact": False,
+                }
             ),
         )
 
-    search_result = retriever.search(scope, course_id, message)
+    document_scope = scope.model_copy(update={"document_ids": frozenset({document_id})})
+    search_result = retriever.search(document_scope, course_id, message)
     next_state = state.model_copy(
         update={
             "last_intent": "tutor",
             "active_course_id": course_id,
             "active_document_id": document_id,
             "candidate_asset_ids": (),
+            "pending_visual_exact": False,
         }
     )
     if search_result.status != "ok" or not search_result.evidence:
