@@ -2,9 +2,9 @@
 
 **Scenario:** Fall 2026 → Spring 2027  
 **Validation result:** PASS for all supplied fixtures and source integrity; M2 ingestion implemented, full visual QA incomplete
-**Scope note:** updated 2026-11-14 from strict dataset validation and the M2 ingestion baseline. Ingestion and retrieval checks are not authenticated conversation acceptance tests.
+**Scope note:** dataset integrity and M2 visual-QA findings remain the ingestion baseline. M4 local HTTP acceptance status is summarized below; this report does not claim full visual QA or production identity acceptance.
 
-> **Re-verified (2026-11-14):** `scripts/validate_datasets.py --require-complete` reports **62 passed, 0 warnings, 0 errors, 0 pending**. All five reading checksums and page counts match the manifest. The validator builds the canonical domain model (14 courses, 1 programme, 5 readings, 2 students), rejecting schema-valid inputs that fail the runtime adapter. `make check` passes Ruff, mypy (45 source files), and **180 tests**. All five PDFs have been ingested with **64/64 pages** retained. Contact sheets were inspected for every page, but only **4 of 50 visual assets** are approved; all five full-visual-QA flags remain false. See [the M2 ingestion baseline](docs/M2_INGESTION_REPORT.md) for per-document results and safety restrictions.
+> **Current verification (2026-11-14):** `scripts/validate_datasets.py --require-complete` reports **62 passed, 0 warnings, 0 errors, 0 pending**. All five reading checksums and page counts match the manifest. The validator builds the canonical domain model (14 courses, 1 programme, 5 readings, 2 students), rejecting schema-valid inputs that fail the runtime adapter. Ruff passes, mypy passes across **81 source files**, and **215 tests pass**. All five PDFs have been ingested with **64/64 pages** retained. Contact sheets were inspected for every page, but only **4 of 50 visual assets** are approved; all five full-visual-QA flags remain false. See [the M2 ingestion baseline](docs/M2_INGESTION_REPORT.md) for per-document results and safety restrictions.
 
 ## Files checked
 
@@ -78,7 +78,11 @@ A sensible core-oriented Spring 2027 proposal for `student-001` is PHYS 110 + MA
 - Verify equation LaTeX, remaining table structure, and chart labels/values against source crops. Unparsed or unreviewed regions remain unavailable; OCR/VLM enrichment and exact chart digitization are not enabled.
 - Review a safe-excerpt set before relaxing the full PHYS 230/HIST 250 quarantine or other weapons-context page restrictions.
 - Confirm the adviser IDs against an adviser directory or identity mapping if one is later supplied. The current source provides only opaque adviser ID strings.
-- Implement and test authenticated multi-turn conversations, generated-answer grounding, HTTP citation delivery, and complete RBAC. Existing Pydantic validators and domain/retrieval regressions do not establish production acceptance.
+- M4 local HTTP acceptance now covers authenticated tutor/planner multi-turn flows,
+  citations and approved-asset delivery, CSRF/session handling, owner isolation, adviser
+  assignment, admin ingestion gating, and unavailable-fact abstention. The OpenAI adapter
+  is mocked in tests; live model grounding/quality and Cognito/production identity remain
+  unverified. Full-corpus visual QA and a labelled quality baseline are still outstanding.
 
 
 ## Sample conversation acceptance suite
@@ -90,7 +94,7 @@ records the reconstruction. It is a test script, not academic evidence.
 
 | Scenario | Current status | Key assertions |
 |---|---|---|
-| PHYS 350 Bohr model question + diagram follow-up | Ingestion, approved-figure retrieval and citation regressions pass; authenticated conversation pending | Figure 2 on PDF page 4 explicitly labels up to 8 electrons for the second level. The fixture requests clarification for an ambiguous diagram reference in turn 2, then verifies `expected_answer_value: 8` with `verified_from_source` after the explicit Figure 2 reference in turn 3. Preserve document/page/asset context and abstain when evidence is unavailable. |
-| Spring 2027 12-unit plan + 8-unit follow-up | Deterministic schedule regressions pass; persisted conversational cap pending | Start with PHYS 110 + MATH 150 + PHYS 340 (12 units); on follow-up recompute to PHYS 110 + MATH 150 (8 units) as the core-progression default. Keep the request-specific cap in thread state and leave the catalogue's 16-unit policy unchanged. |
+| PHYS 350 Bohr model question + diagram follow-up | Local authenticated HTTP conversation, approved-figure retrieval, citation resolution, and crop delivery pass | Figure 2 on PDF page 4 explicitly labels up to 8 electrons for the second level. The conversation asks for clarification when the diagram is ambiguous, then verifies the value after Figure 2 is specified. |
+| Spring 2027 12-unit plan + 8-unit follow-up | Local authenticated HTTP conversation and persisted cap recomputation pass | Starts with PHYS 110 + MATH 150 + PHYS 340 (12 units), then recomputes to PHYS 110 + MATH 150 (8 units). The catalogue's 16-unit policy is unchanged. |
 
 The 8-unit default prioritizes the two outstanding Physics core foundations and their downstream prerequisite paths. PHYS 340 remains prerequisite-eligible and can be chosen instead when the student explicitly prefers to prioritize Physics electives.

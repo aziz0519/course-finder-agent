@@ -18,6 +18,11 @@ TUTOR = re.compile(
     r"|energy level|raven|bohr|critical mass|fissile|nuclear weapon)\b",
     re.IGNORECASE,
 )
+UNSUPPORTED_DATA = re.compile(
+    r"\b(?:seats?|seat availability|class schedule|timetable|course sections?|"
+    r"instructor availability|grade prediction|graduation date)\b",
+    re.IGNORECASE,
+)
 
 
 def route_intent(message: str, state: ConversationState) -> Intent:
@@ -27,6 +32,8 @@ def route_intent(message: str, state: ConversationState) -> Intent:
     with the tutor. Ambiguous unrelated text is not sent to arbitrary tools.
     """
 
+    if UNSUPPORTED_DATA.search(message):
+        return "unsupported"
     if PLANNING.search(message):
         return "planner"
     if TUTOR.search(message):

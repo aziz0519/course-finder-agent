@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, HTTPException, status
+from fastapi.responses import FileResponse
 
+from app.agents.models import Citation
 from app.api.v1.dependencies import CsrfPrincipalDep, PrincipalDep, ServicesDep
 from app.repositories.conversations import ConversationThread, StoredMessage
 from app.schemas.chat import (
@@ -14,8 +16,19 @@ from app.schemas.chat import (
     MessageResponse,
     StoredMessageResponse,
 )
+from app.schemas.citations import CitationEvidenceResponse
 
 router = APIRouter(prefix="/chat/sessions", tags=["chat"])
+
+
+def _thread_citations(thread_id: str, owner_id: str, services: ServicesDep) -> tuple[Citation, ...]:
+    messages = services.conversations.messages(thread_id, owner_id)
+    return tuple(
+        citation
+        for message in messages
+        if message.response
+        for citation in message.response.citations
+    )
 
 
 def _student_id(principal: PrincipalDep) -> str:
@@ -25,6 +38,20 @@ def _student_id(principal: PrincipalDep) -> str:
             detail="Student role required.",
         )
     return principal.student_id
+
+
+def _owned_thread(
+    thread_id: str,
+    principal: PrincipalDep,
+    services: ServicesDep,
+) -> ConversationThread:
+    try:
+        thread = services.conversations.get(thread_id, principal.user_id)
+    except PermissionError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND) from exc
+    if thread.authorized_student_id != _student_id(principal):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+    return thread
 
 
 def _summary(thread: ConversationThread) -> ConversationSummaryResponse:
@@ -79,7 +106,8 @@ def get_conversation(
 ) -> ConversationResponse:
     _student_id(principal)
     try:
-        thread, messages = services.conversations.get_with_messages(thread_id, principal.user_id)
+        thread = _owned_thread(thread_id, principal, services)
+        messages = services.conversations.messages(thread_id, principal.user_id)
     except PermissionError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND) from exc
     return ConversationResponse(
@@ -100,6 +128,7 @@ def submit_message(
     services: ServicesDep,
 ) -> MessageResponse:
     student_id = _student_id(principal)
+    _owned_thread(thread_id, principal, services)
     scope = services.reading_scope(principal.user_id, student_id)
     try:
         response = services.conversation_service.handle_message(
@@ -116,3 +145,85 @@ def submit_message(
             detail="Conversation was updated concurrently; retry the request.",
         ) from exc
     return MessageResponse(thread_id=thread_id, response=response)
+
+
+@router.get(
+    "/{thread_id}/citations/{chunk_id}",
+    response_model=CitationEvidenceResponse,
+)
+def get_citation(
+    thread_id: str,
+    chunk_id: str,
+    principal: PrincipalDep,
+    services: ServicesDep,
+) -> CitationEvidenceResponse:
+    student_id = _student_id(principal)
+    try:
+        _owned_thread(thread_id, principal, services)
+        citations = _thread_citations(thread_id, principal.user_id, services)
+    except PermissionError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND) from exc
+    citation = next(
+        (item for item in citations if item.chunk_id == chunk_id),
+        None,
+    )
+    if citation is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+    scope = services.reading_scope(principal.user_id, student_id)
+    try:
+        evidence = services.retriever.resolve_citation(
+            scope,
+            citation.course_code,
+            chunk_id,
+        )
+    except (PermissionError, ValueError) as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND) from exc
+    return CitationEvidenceResponse(
+        document_title=evidence.document_title,
+        document_id=evidence.document_id,
+        course_code=evidence.course_code,
+        page_number=evidence.page_number,
+        section=evidence.section,
+        excerpt=evidence.excerpt,
+        chunk_id=evidence.chunk_id,
+        source_checksum=evidence.source_checksum,
+        ingestion_version=evidence.ingestion_version,
+        extraction_method=evidence.extraction_method,
+    )
+
+
+@router.get("/{thread_id}/assets/{asset_id}")
+def get_visual_asset(
+    thread_id: str,
+    asset_id: str,
+    principal: PrincipalDep,
+    services: ServicesDep,
+) -> FileResponse:
+    student_id = _student_id(principal)
+    try:
+        _owned_thread(thread_id, principal, services)
+        citations = _thread_citations(thread_id, principal.user_id, services)
+    except PermissionError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND) from exc
+    citation = next((item for item in citations if item.asset_id == asset_id), None)
+    if citation is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+    scope = services.reading_scope(principal.user_id, student_id)
+    try:
+        visual = services.retriever.resolve_visual(
+            scope,
+            citation.course_code,
+            citation.document_id,
+            asset_id=asset_id,
+        )
+    except (PermissionError, ValueError) as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND) from exc
+    if visual.status != "ok" or visual.evidence is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+    return FileResponse(
+        visual.evidence.crop_path,
+        media_type="image/png",
+        filename=f"{asset_id}.png",
+        content_disposition_type="inline",
+        headers={"Cache-Control": "private, no-store"},
+    )

@@ -7,6 +7,7 @@ import logging
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from starlette.middleware.base import BaseHTTPMiddleware
 
 from app.api.v1.routes import api_router
 from app.api.v1.services import ApiServices
@@ -24,6 +25,30 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         openapi_url="/api/v1/openapi.json",
     )
     application.state.services = ApiServices.create(configured)
+
+    class RedactedAuditMiddleware(BaseHTTPMiddleware):
+        async def dispatch(self, request: Request, call_next):
+            response = await call_next(request)
+            if request.url.path.startswith("/api/v1/"):
+                services: ApiServices = request.app.state.services
+                principal = services.auth.authenticate(
+                    request.cookies.get("course_finder_session")
+                )
+                route = request.scope.get("route")
+                template = getattr(route, "path", "/unknown")
+                segments = template.strip("/").split("/")
+                resource_type = segments[2] if len(segments) > 2 else "api"
+                services.audit.record(
+                    actor_user_id=principal.user_id if principal else None,
+                    actor_role=principal.role if principal else None,
+                    action=f"{request.method} {template}",
+                    resource_type=resource_type,
+                    outcome="allowed" if response.status_code < 400 else "denied",
+                    metadata={"http_status": str(response.status_code)},
+                )
+            return response
+
+    application.add_middleware(RedactedAuditMiddleware)
     origins = (
         ["http://localhost:3000", "http://127.0.0.1:3000"]
         if configured.app_env != "production"

@@ -4,9 +4,11 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from app.agents.answer_composer import AnswerComposer, OfflineAnswerComposer, OpenAIAnswerComposer
 from app.auth.local_adapter import LocalAuthService
 from app.core.config import Settings
 from app.ingestion.dataset import AcademicDataset, load_dataset
+from app.repositories.audit import AuditRepository
 from app.repositories.conversations import ConversationRepository
 from app.repositories.readings import ReadingRepository
 from app.retrieval.readings import LocalRetriever, ReadingScope
@@ -19,7 +21,9 @@ class ApiServices:
     settings: Settings
     auth: LocalAuthService
     conversations: ConversationRepository
+    audit: AuditRepository
     readings: ReadingRepository
+    retriever: LocalRetriever
     conversation_service: ConversationService
     ingestion_jobs: IngestionJobService
 
@@ -32,16 +36,28 @@ class ApiServices:
             )
         settings.processed_dir.mkdir(parents=True, exist_ok=True)
         conversations = ConversationRepository(settings.processed_dir / "conversations.sqlite3")
+        audit = AuditRepository(settings.processed_dir / "audit.sqlite3")
         readings = ReadingRepository(settings.processed_dir / "readings")
+        retriever = LocalRetriever(readings)
+        composer: AnswerComposer = OfflineAnswerComposer()
+        if settings.model_provider.casefold() == "openai":
+            if settings.openai_api_key is None or not settings.openai_api_key.get_secret_value():
+                raise RuntimeError("MODEL_PROVIDER=openai requires OPENAI_API_KEY")
+            if not settings.model_name:
+                raise RuntimeError("MODEL_PROVIDER=openai requires MODEL_NAME")
+            composer = OpenAIAnswerComposer(settings.openai_api_key, settings.model_name)
         return cls(
             settings=settings,
             auth=LocalAuthService(settings),
             conversations=conversations,
+            audit=audit,
             readings=readings,
+            retriever=retriever,
             conversation_service=ConversationService(
                 conversations,
                 lambda: load_dataset(settings.data_root),
-                LocalRetriever(readings),
+                retriever,
+                composer,
             ),
             ingestion_jobs=IngestionJobService(settings.data_root, readings),
         )

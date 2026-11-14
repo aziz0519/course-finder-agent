@@ -74,7 +74,9 @@ class LocalAuthService:
 
     def __init__(self, settings: Settings):
         self._password_hash = PasswordHash.recommended()
+        self._dummy_hash = self._password_hash.hash(secrets.token_urlsafe(32))
         password = settings.local_dev_password.get_secret_value()
+        self._configured = not password.startswith("replace-") and bool(password)
         self._credential_hashes = {
             principal.username: self._password_hash.hash(password) for principal in self._USERS
         }
@@ -91,6 +93,8 @@ class LocalAuthService:
     def login(self, username: str, password: str, client_key: str) -> tuple[str, str, Principal]:
         """Verify credentials and return an opaque token, CSRF token, and principal."""
 
+        if not self._configured:
+            raise RuntimeError("local authentication is not configured")
         now = datetime.now(UTC)
         with self._lock:
             failures = self._failures[client_key]
@@ -100,10 +104,9 @@ class LocalAuthService:
                 raise LoginRateLimitedError
 
             principal = self._principals.get(username)
-            credential_hash = self._credential_hashes.get(username)
+            credential_hash = self._credential_hashes.get(username, self._dummy_hash)
             if (
                 principal is None
-                or credential_hash is None
                 or not self._password_hash.verify(password, credential_hash)
             ):
                 failures.append(now)
