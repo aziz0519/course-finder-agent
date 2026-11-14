@@ -45,10 +45,13 @@ class Settings(BaseSettings):
     auth_provider: AuthProviderName = "local"
     session_secret: SecretStr = SecretStr("replace-me-local-only")
     csrf_secret: SecretStr = SecretStr("replace-me-local-only")
+    local_dev_password: SecretStr = SecretStr("replace-me-local-only")
+    session_ttl_seconds: int = 3600
 
     # Model providers, kept behind interfaces. "offline" runs deterministically.
     model_provider: str = "offline"
     model_name: str = ""
+    openai_api_key: SecretStr | None = None
     embedding_model: str = ""
     vector_dimensions: int = 0
 

@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import errno
 import json
 import os
 import shutil
+import sqlite3
 import tempfile
 from pathlib import Path
 
@@ -67,6 +69,12 @@ def ingest_reading(
         (staging / "parsed.json").write_text(parsed.model_dump_json(indent=2), encoding="utf-8")
         report = check_reading(parsed, staging)
         (staging / "quality.json").write_text(report.model_dump_json(indent=2), encoding="utf-8")
+        if not directory.exists():
+            try:
+                os.replace(staging, directory)
+            except OSError as exc:
+                if exc.errno not in (errno.EEXIST, errno.ENOTEMPTY) or not directory.is_dir():
+                    raise
         if directory.exists():
             # Recover an artefact-complete job interrupted before its registry commit.
             previous = ParsedReading.model_validate_json((directory / "parsed.json").read_text())
@@ -79,9 +87,20 @@ def ingest_reading(
                 raise ValueError("existing immutable version conflicts")
             parsed = previous
             report = check_reading(parsed, directory)
-        else:
-            os.replace(staging, directory)
-        repository.publish(parsed, report, directory)
+        try:
+            repository.publish(parsed, report, directory)
+        except sqlite3.IntegrityError as exc:
+            if getattr(exc, "sqlite_errorcode", None) not in (
+                sqlite3.SQLITE_CONSTRAINT_PRIMARYKEY,
+                sqlite3.SQLITE_CONSTRAINT_UNIQUE,
+            ) or str(exc) != (
+                "UNIQUE constraint failed: reading_versions.document_id, reading_versions.version"
+            ):
+                raise
+            committed = repository.existing(document.document_id, ingestion_version)
+            if committed is None or committed.source_checksum != checksum:
+                raise
+            return committed
         return report
     except Exception as exc:
         # Keep diagnostics but never activate an incomplete/failed extraction.
