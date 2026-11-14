@@ -140,6 +140,10 @@ class ConversationRepository:
         if row is None:
             # Do not disclose whether another owner has this ID.
             raise PermissionError("conversation unavailable")
+        return self._thread(row)
+
+    @staticmethod
+    def _thread(row: sqlite3.Row) -> ConversationThread:
         return ConversationThread(
             thread_id=row["thread_id"],
             owner_user_id=row["owner_user_id"],
@@ -246,12 +250,28 @@ class ConversationRepository:
         )
 
     def messages(self, thread_id: str, owner_user_id: str) -> tuple[StoredMessage, ...]:
-        self.get(thread_id, owner_user_id)
+        return self.get_with_messages(thread_id, owner_user_id)[1]
+
+    def get_with_messages(
+        self, thread_id: str, owner_user_id: str
+    ) -> tuple[ConversationThread, tuple[StoredMessage, ...]]:
+        """Read the owned checkpoint and messages from one SQLite snapshot."""
         with self.connect() as db:
+            db.execute("BEGIN")
+            row = db.execute(
+                "SELECT * FROM conversations WHERE thread_id=? AND owner_user_id=?",
+                (thread_id, owner_user_id),
+            ).fetchone()
+            if row is None:
+                raise PermissionError("conversation unavailable")
             rows = db.execute(
                 "SELECT * FROM conversation_messages WHERE thread_id=? ORDER BY sequence",
                 (thread_id,),
             ).fetchall()
+        return self._thread(row), self._messages(rows)
+
+    @staticmethod
+    def _messages(rows: list[sqlite3.Row]) -> tuple[StoredMessage, ...]:
         return tuple(
             StoredMessage(
                 message_id=row["message_id"],

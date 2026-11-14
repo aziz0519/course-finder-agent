@@ -25,6 +25,11 @@ class ApiServices:
 
     @classmethod
     def create(cls, settings: Settings) -> ApiServices:
+        if settings.auth_provider != "local":
+            raise RuntimeError(
+                "Cognito authentication is disabled until token verification and "
+                "application identity mapping are implemented."
+            )
         settings.processed_dir.mkdir(parents=True, exist_ok=True)
         conversations = ConversationRepository(settings.processed_dir / "conversations.sqlite3")
         readings = ReadingRepository(settings.processed_dir / "readings")

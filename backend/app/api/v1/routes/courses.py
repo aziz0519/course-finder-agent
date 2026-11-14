@@ -56,7 +56,10 @@ def get_course(
     services: ServicesDep,
 ) -> CourseResponse:
     del principal
-    course = services.dataset().catalog.maybe_course(course_id.upper())
+    catalog = services.dataset().catalog
+    course = catalog.maybe_course(course_id)
+    if course is None:
+        course = catalog.maybe_course(course_id.upper())
     if course is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

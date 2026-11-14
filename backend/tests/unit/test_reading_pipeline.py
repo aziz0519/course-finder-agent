@@ -280,3 +280,51 @@ def test_changed_manifest_metadata_is_not_skipped_as_idempotent(synthetic) -> No
 )
 def test_safety_policy(course: str, text: str, label: str) -> None:
     assert classify_page(course, text) == label
+
+
+def test_publish_race_returns_committed_report(synthetic, monkeypatch):
+    root, document, review, repository = synthetic
+    publish = repository.publish
+
+    def competing_publish(parsed, report, directory):
+        publish(parsed, report, directory)
+        publish(parsed, report, directory)
+
+    monkeypatch.setattr(repository, "publish", competing_publish)
+    report = ingest_reading(document, root, repository, review)
+    assert report == repository.existing(document.document_id, report.ingestion_version)
+
+
+def test_unrelated_integrity_failure_propagates(synthetic, monkeypatch):
+    root, document, review, repository = synthetic
+
+    def fail(*args):
+        raise sqlite3.IntegrityError("unrelated constraint")
+
+    monkeypatch.setattr(repository, "publish", fail)
+    with pytest.raises(sqlite3.IntegrityError, match="unrelated"):
+        ingest_reading(document, root, repository, review)
+
+
+@pytest.mark.parametrize("collision", [True, False])
+def test_directory_publish_race_and_unrelated_os_error(synthetic, monkeypatch, collision):
+    import errno
+    import os
+    import shutil
+
+    root, document, review, repository = synthetic
+
+    def replace(source, destination):
+        if collision:
+            shutil.copytree(source, destination)
+            raise OSError(errno.ENOTEMPTY, "concurrent directory")
+        raise OSError(errno.EACCES, "unrelated filesystem failure")
+
+    monkeypatch.setattr(os, "replace", replace)
+    if collision:
+        report = ingest_reading(document, root, repository, review)
+        assert repository.existing(document.document_id, report.ingestion_version) == report
+    else:
+        with pytest.raises(OSError) as exc:
+            ingest_reading(document, root, repository, review)
+        assert exc.value.errno == errno.EACCES

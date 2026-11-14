@@ -79,8 +79,7 @@ def get_conversation(
 ) -> ConversationResponse:
     _student_id(principal)
     try:
-        thread = services.conversations.get(thread_id, principal.user_id)
-        messages = services.conversations.messages(thread_id, principal.user_id)
+        thread, messages = services.conversations.get_with_messages(thread_id, principal.user_id)
     except PermissionError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND) from exc
     return ConversationResponse(

@@ -61,9 +61,7 @@ def test_student_profile_progress_and_courses(api_client: TestClient) -> None:
     progress = api_client.get("/api/v1/students/me/progress")
     assert progress.status_code == 200
     history = next(
-        group
-        for group in progress.json()["requirement_groups"]
-        if group["group_id"] == "history"
+        group for group in progress.json()["requirement_groups"] if group["group_id"] == "history"
     )
     assert history["state"] == "satisfied"
 
@@ -98,8 +96,7 @@ def test_planner_and_multi_turn_cap(api_client: TestClient) -> None:
         f"/api/v1/chat/sessions/{thread_id}/messages",
         json={
             "content": (
-                "What should I take in Spring 2027 to progress my degree? "
-                "Keep it to 12 units."
+                "What should I take in Spring 2027 to progress my degree? Keep it to 12 units."
             )
         },
         headers={"X-CSRF-Token": csrf},
@@ -152,3 +149,20 @@ def test_invalid_password_is_rejected(api_client: TestClient) -> None:
     )
     assert response.status_code == 401
     assert response.json()["detail"] == "Invalid username or password."
+
+
+def test_blank_message_returns_validation_error_before_workflow(api_client, monkeypatch):
+    from unittest.mock import Mock
+
+    csrf = login(api_client, "student-001")
+    handler = Mock(side_effect=AssertionError("blank reached workflow"))
+    monkeypatch.setattr(
+        api_client.app.state.services.conversation_service, "handle_message", handler
+    )
+    response = api_client.post(
+        "/api/v1/chat/sessions/missing/messages",
+        json={"content": " \t\n"},
+        headers={"X-CSRF-Token": csrf},
+    )
+    assert response.status_code == 422
+    handler.assert_not_called()

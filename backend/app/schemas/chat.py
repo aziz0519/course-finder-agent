@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from app.agents.models import AgentResponse, ConversationState
 
@@ -15,6 +15,13 @@ class ConversationCreate(BaseModel):
 
 class MessageCreate(BaseModel):
     content: str = Field(min_length=1, max_length=4000)
+
+    @field_validator("content")
+    @classmethod
+    def nonblank_content(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("content must contain non-whitespace characters")
+        return value
 
 
 class StoredMessageResponse(BaseModel):

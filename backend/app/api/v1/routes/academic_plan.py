@@ -10,6 +10,7 @@ from app.agents.academic_planner import plan
 from app.api.v1.dependencies import PrincipalDep, ServicesDep
 from app.domain.errors import UnknownStudentError
 from app.domain.models import Student
+from app.ingestion.dataset import AcademicDataset
 from app.schemas.academic_plan import PlanQuery, PlanResponse
 
 router = APIRouter(prefix="/academic-plan", tags=["academic-plan"])
@@ -18,7 +19,7 @@ router = APIRouter(prefix="/academic-plan", tags=["academic-plan"])
 def _authorized_student(
     query: PlanQuery,
     principal: PrincipalDep,
-    services: ServicesDep,
+    dataset: AcademicDataset,
 ) -> Student:
     student_id = query.student_id or principal.student_id
     if not student_id:
@@ -27,7 +28,7 @@ def _authorized_student(
             detail="student_id is required for adviser requests.",
         )
     try:
-        student = services.dataset().student(student_id)
+        student = dataset.student(student_id)
     except UnknownStudentError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND) from exc
     own_record = principal.role == "student" and principal.student_id == student_id
@@ -52,7 +53,7 @@ def get_academic_plan(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail=f"Only {dataset.catalog.policy.next_term.label} is supported by this snapshot.",
         )
-    student = _authorized_student(query, principal, services)
+    student = _authorized_student(query, principal, dataset)
     response = plan(
         student,
         dataset.catalog,

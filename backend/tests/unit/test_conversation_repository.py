@@ -83,3 +83,44 @@ def test_failed_turn_rolls_back_messages_and_checkpoint(tmp_path) -> None:
     stored = repository.get(thread.thread_id, "user-001")
     assert stored.state == ConversationState()
     assert stored.revision == 0
+
+
+def test_checkpoint_and_messages_share_read_snapshot(tmp_path, monkeypatch):
+    from contextlib import contextmanager
+
+    repository = ConversationRepository(tmp_path / "conversations.sqlite3")
+    thread = repository.create("owner", "student-001")
+    with repository.connect() as db:
+        db.execute("PRAGMA journal_mode=WAL")
+    original_connect = repository.connect
+    interleaved = False
+
+    @contextmanager
+    def interleave():
+        nonlocal interleaved
+        with original_connect() as db:
+
+            def on_query(query):
+                nonlocal interleaved
+                if "SELECT * FROM conversation_messages" in query and not interleaved:
+                    interleaved = True
+                    repository.append_turn(
+                        thread,
+                        "Question",
+                        AgentResponse(status="ok", intent="planner", text="Answer"),
+                        ConversationState(last_intent="planner"),
+                    )
+
+            db.set_trace_callback(on_query)
+            yield db
+
+    monkeypatch.setattr(repository, "connect", interleave)
+    checkpoint, messages = repository.get_with_messages(thread.thread_id, "owner")
+    assert interleaved
+    assert checkpoint.revision == 0
+    assert messages == ()
+    checkpoint, messages = repository.get_with_messages(thread.thread_id, "owner")
+    assert checkpoint.revision == 1
+    assert len(messages) == 2
+    with pytest.raises(PermissionError):
+        repository.get_with_messages(thread.thread_id, "other")
