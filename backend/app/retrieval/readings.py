@@ -11,6 +11,7 @@ from __future__ import annotations
 import math
 import re
 import sqlite3
+from contextlib import closing
 from pathlib import Path
 from typing import Literal, Protocol
 
@@ -38,6 +39,7 @@ class Evidence(DomainModel):
     section: tuple[str, ...]
     excerpt: str
     chunk_id: str
+    extraction_method: str
     bbox: tuple[float, float, float, float]
     asset_refs: tuple[str, ...] = ()
     untrusted_source: Literal[True] = True
@@ -149,6 +151,7 @@ def _evidence(reading: ParsedReading, chunk: ReadingChunk) -> Evidence:
         section=chunk.section_path,
         excerpt=chunk.text,
         chunk_id=chunk.chunk_id,
+        extraction_method=chunk.extraction_method,
         bbox=chunk.bbox,
         asset_refs=chunk.asset_refs,
     )
@@ -215,7 +218,7 @@ class LocalRetriever:
                 status="no_evidence", note="Please specify a topic from the reading."
             )
         # Populate a private, ephemeral FTS index *after* applying every filter.
-        with sqlite3.connect(":memory:") as db:
+        with closing(sqlite3.connect(":memory:")) as db, db:
             db.execute(
                 "CREATE VIRTUAL TABLE scoped_fts USING fts5(text, tokenize='porter unicode61')"
             )

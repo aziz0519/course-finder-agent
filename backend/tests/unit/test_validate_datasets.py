@@ -120,3 +120,38 @@ def test_conversation_validator_rejects_an_unverified_diagram_value() -> None:
         level == "error" and check == "Tutor value not asserted before verification"
         for level, check, _ in report.findings
     )
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [("turns", 1), ("expected_recommended_courses", [["unhashable"]])],
+)
+def test_schema_invalid_conversations_report_failure_without_semantic_validation(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+    field: str,
+    value: Any,
+) -> None:
+    suite, catalogue, students = _supplied_fixtures()
+    planner = next(c for c in suite["conversations"] if c["kind"] == "planner")
+    if field == "turns":
+        planner[field] = value
+    else:
+        planner["turns"][0][field] = value
+    samples = tmp_path / "samples"
+    samples.mkdir()
+    for filename, payload in (
+        ("course-catalog.json", catalogue),
+        ("student-records.json", students),
+        ("test-conversations.json", suite),
+    ):
+        (samples / filename).write_text(json.dumps(payload), encoding="utf-8")
+
+    def unexpected_semantic_validation(*args, **kwargs):
+        pytest.fail("schema-invalid suite reached semantic validation")
+
+    monkeypatch.setattr(validator, "validate_conversations", unexpected_semantic_validation)
+    assert validator.main(["--data-root", str(tmp_path)]) == 1
+    output = capsys.readouterr().out
+    assert "Conversation suite schema violation" in output and "Result: FAILED" in output

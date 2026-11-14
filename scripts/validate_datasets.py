@@ -938,13 +938,14 @@ def main(argv: list[str] | None = None) -> int:
         validate_manifest(report, manifest, data_root)
 
     if conversations is not None:
-        validate_schema(
+        conversations_valid = validate_schema(
             report,
             conversations,
             resolve_schema_path(CONVERSATIONS_SCHEMA_NAME, data_root),
             "Conversation suite",
         )
-        validate_conversations(report, conversations, catalogue, students)
+        if conversations_valid:
+            validate_conversations(report, conversations, catalogue, students)
 
     validate_canonical_adapters(report, catalogue, students, data_root)
 

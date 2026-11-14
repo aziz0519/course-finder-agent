@@ -123,7 +123,7 @@ def test_bohr_verified_shell_diagram(corpus: ReadingRepository, data_root: Path)
     suite = json.loads((data_root / "samples" / "test-conversations.json").read_text())
     tutor = next(c for c in suite["conversations"] if c["kind"] == "tutor")
     match = re.search(r"up to (\d+) electrons", result.evidence.asset.source_transcription)
-    assert match and int(match[1]) == tutor["turns"][1]["expected_answer_value"]
+    assert match and int(match[1]) == tutor["turns"][2]["expected_answer_value"]
 
 
 def test_bohr_equation_abstention_and_ambiguous_diagram(corpus: ReadingRepository) -> None:

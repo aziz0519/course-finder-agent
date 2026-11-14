@@ -152,9 +152,9 @@ class NativePdfParser:
                 regions: list[tuple[BBox, VisualType, tuple[tuple[str | None, ...], ...]]] = []
                 # get_image_info reports actual placements, unlike shared image resources.
                 for image in page.get_image_info(xrefs=True):
-                    box = _bbox(image["bbox"])
-                    if pymupdf.Rect(box).get_area() > 60:
-                        regions.append((box, "figure", ()))
+                    visible = pymupdf.Rect(_bbox(image["bbox"])) & page.rect
+                    if visible.get_area() > 60:
+                        regions.append((_bbox(visible), "figure", ()))
                 for table in tables.pages[number - 1].find_tables():
                     rows = tuple(tuple(cell for cell in row) for row in table.extract())
                     regions.append((_bbox(table.bbox), "table", rows))

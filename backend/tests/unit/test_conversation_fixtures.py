@@ -34,6 +34,17 @@ def test_conversation_suite_matches_its_schema(data_root: Path) -> None:
     jsonschema.validate(_load_suite(data_root), _load_schema(data_root))
 
 
+def test_ambiguous_diagram_clarifies_before_verified_figure_answer(data_root: Path) -> None:
+    turns = _conversation(_load_suite(data_root), "tutor")["turns"]
+    ambiguous, identified = turns[1:3]
+    assert ambiguous["expected_answer_value"] is None
+    assert ambiguous["value_verification_status"] == "not_applicable"
+    assert any("Ask which diagram" in text for text in ambiguous["response_requirements"])
+    assert "Figure 2 on PDF page 4" in identified["user"]
+    assert identified["value_verification_status"] == "verified_from_source"
+    assert identified["expected_answer_value"] == 8
+
+
 def test_planner_turns_match_the_deterministic_engine(
     dataset: AcademicDataset, data_root: Path
 ) -> None:

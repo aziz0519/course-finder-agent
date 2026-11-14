@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import sqlite3
+
 import pymupdf
 import pytest
 
@@ -65,6 +67,88 @@ def test_new_review_replaces_version_and_invalidates_old_citations(synthetic) ->
         retriever.resolve_citation(authorized(document), document.course_id, old.chunk_id)
     assert len(repository.inventory()) == 2
     assert sum(item["active"] for item in repository.inventory()) == 1
+
+
+@pytest.mark.parametrize("fail_query", [False, True])
+def test_search_closes_connection_after_commit_or_rollback(
+    synthetic,
+    monkeypatch: pytest.MonkeyPatch,
+    fail_query: bool,
+) -> None:
+    root, document, review, repository = synthetic
+    ingest_reading(document, root, repository, review)
+    connect = sqlite3.connect
+    events = []
+    connections = []
+
+    class TrackedConnection(sqlite3.Connection):
+        def execute(self, sql, parameters=()):
+            if fail_query and sql.startswith("SELECT rowid FROM scoped_fts"):
+                assert self.in_transaction
+                raise RuntimeError("simulated search failure")
+            return super().execute(sql, parameters)
+
+        def __exit__(self, exc_type, exc_value, traceback):
+            events.append(("transaction_exit", exc_type))
+            result = super().__exit__(exc_type, exc_value, traceback)
+            assert not self.in_transaction
+            return result
+
+        def close(self):
+            assert not self.in_transaction
+            rows = self.execute("SELECT COUNT(*) FROM scoped_fts").fetchone()[0]
+            assert rows == 0 if fail_query else rows > 0
+            events.append(("close", None))
+            super().close()
+
+    def tracked_connect(database, *args, **kwargs):
+        if database == ":memory:":
+            connection = connect(database, *args, factory=TrackedConnection, **kwargs)
+            connections.append(connection)
+            return connection
+        return connect(database, *args, **kwargs)
+
+    monkeypatch.setattr(sqlite3, "connect", tracked_connect)
+    retriever = LocalRetriever(repository)
+    if fail_query:
+        with pytest.raises(RuntimeError, match="simulated search failure"):
+            retriever.search(authorized(document), document.course_id, "hydrogen")
+    else:
+        assert retriever.search(authorized(document), document.course_id, "hydrogen").evidence
+    assert events == [
+        ("transaction_exit", RuntimeError if fail_query else None),
+        ("close", None),
+    ]
+    assert len(connections) == 1
+    with pytest.raises(sqlite3.ProgrammingError, match="closed"):
+        connections[0].execute("SELECT 1")
+
+
+def test_extraction_method_survives_all_evidence_conversions(synthetic) -> None:
+    root, document, review, repository = synthetic
+    ingest_reading(document, root, repository, review)
+    reading, _ = repository.active_candidates(
+        document.course_id, frozenset({document.document_id})
+    )[0]
+    methods = {c.chunk_id: c.extraction_method for c in reading.chunks}
+    retriever = LocalRetriever(repository)
+    scope = authorized(document)
+    result = retriever.search(scope, document.course_id, "hydrogen")
+    assert result.evidence
+    for evidence in result.evidence:
+        assert evidence.extraction_method == methods[evidence.chunk_id]
+        citation = retriever.resolve_citation(scope, document.course_id, evidence.chunk_id)
+        assert citation.model_dump()["extraction_method"] == methods[evidence.chunk_id]
+    visual = retriever.resolve_visual(
+        scope,
+        document.course_id,
+        document.document_id,
+        asset_id=reading.assets[0].asset_id,
+    )
+    assert visual.evidence and visual.evidence.adjacent_evidence
+    assert all(
+        e.extraction_method == methods[e.chunk_id] for e in visual.evidence.adjacent_evidence
+    )
 
 
 def test_checksum_and_stale_review_fail_closed(synthetic) -> None:

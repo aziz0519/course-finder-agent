@@ -22,6 +22,8 @@ def main(argv: list[str] | None = None) -> int:
     args_parser.add_argument("--reviews", type=Path)
     args_parser.add_argument("--course", help="Only ingest this catalogue course code")
     args = args_parser.parse_args(argv)
+    if args.reviews is not None and not args.reviews.is_file():
+        args_parser.error("--reviews must point to an existing review manifest file")
     dataset = load_dataset(args.data_root)
     repository = ReadingRepository(args.output or args.data_root / "processed" / "readings")
     review_path = args.reviews or args.data_root / "manifests" / "reading_qa.json"
