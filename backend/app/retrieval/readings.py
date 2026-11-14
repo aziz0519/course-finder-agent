@@ -93,6 +93,18 @@ class Retriever(Protocol):
         chunk_id: str,
     ) -> Evidence: ...
 
+    def resolve_visual(
+        self,
+        scope: ReadingScope,
+        course_id: str,
+        document_id: str,
+        *,
+        asset_id: str | None = None,
+        page_number: int | None = None,
+        visual_type: VisualType | None = None,
+        exact: bool = False,
+    ) -> VisualResult: ...
+
 
 VISUAL_QUERY = re.compile(
     r"\b(diagram|figure|chart|table|equation|formula|graph|plot|image)\b", re.IGNORECASE

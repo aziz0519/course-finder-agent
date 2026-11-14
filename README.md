@@ -15,7 +15,7 @@ assistant says so instead of guessing.
 | **M0** | Repo scaffold, typed settings, dataset contract, Phase 0 validator | ✅ **complete** (2026-11-13) |
 | **M1** | Deterministic domain core: adapters, prerequisite eligibility, degree progress | ✅ **complete** (2026-11-13) |
 | **M2** | Reading ingestion and course-scoped retrieval with page citations | **implemented** — visual QA remains gated |
-| M3 | Conversation state, supervisor routing, tutor and planner | |
+| M3 | Conversation state, supervisor routing, tutor and planner | **in progress** — baseline workflow implemented |
 | M4 | API, local auth, RBAC and negative security tests | |
 | M5 | UI (Gradio over the API is the recommendation; Next.js remains supported) | |
 | M6 | Deployable demo (container + single CDK stack) | |
@@ -201,7 +201,8 @@ See [M2 usage and boundaries](docs/M2_READINGS.md) and the
 [ingestion baseline](docs/M2_INGESTION_REPORT.md). Full visual QA is **not** complete:
 unreviewed formulas/charts/tables remain unavailable, and no exact chart digitization
 or OCR/VLM enrichment is enabled. Tutor answer generation and conversation state are M3;
-authentication and HTTP delivery remain M4.
+authentication and HTTP delivery remain M4. The initial workflow is documented in
+[`docs/M3_CONVERSATIONS.md`](docs/M3_CONVERSATIONS.md).
 
 ## Open decisions
 
