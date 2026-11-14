@@ -16,7 +16,8 @@ Notes:
   `data/manifests/course_readings_manifest.json`. Update that manifest when you add a file.
 - Do not rename files: the catalogue `materials[].file` values and the manifest both
   expect these exact names.
-- The PHYS 230 file is expected to be born-digital with a usable text layer. Do not
-  assume the other four share its layout; each gets its own preflight in M2.
+- M2 independently preflighted and ingested all five files; all 64 pages have native
+  text layers. Only 4 of 50 visual assets are approved, so full visual QA remains
+  pending. See [the M2 baseline](../../../docs/M2_INGESTION_REPORT.md).
 - Retain the source attribution and licence notice (the PHYS 230 PDF carries a
   Creative Commons Attribution-ShareAlike statement on its final page).

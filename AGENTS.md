@@ -1,9 +1,9 @@
 # AGENTS.md — Student Learning & Course Planning Assistant
 
-> **Status:** MVP engineering instructions; updated after the first representative PDF preflight on 2026-11-13  
+> **Status:** MVP engineering instructions; implementation status refreshed after M2 verification on 2026-11-14
 > **Scenario clock:** Fall 2026 is the current term; Spring 2027 is the next term.  
 > **Example account:** `student-001`  
-> **Data boundary:** The course catalogue and degree requirements are supplied in `data/samples/course-catalog.json`; the two-student synthetic records are supplied in `data/samples/student-records.json`. These are the authoritative MVP fixtures. All five catalogue-referenced PDFs are now present under `data/samples/course-materials/`; verify their checksums and page counts against `data/manifests/course_readings_manifest.json` before declaring the reading corpus complete. Ingestion is still pending. Do not create substitute student facts or academic facts.
+> **Data boundary:** The course catalogue and degree requirements are supplied in `data/samples/course-catalog.json`; the two-student synthetic records are supplied in `data/samples/student-records.json`. These are the authoritative MVP fixtures. All five catalogue-referenced PDFs are now present under `data/samples/course-materials/`; verify their checksums and page counts against `data/manifests/course_readings_manifest.json` before declaring the reading corpus complete. M2 has ingested all five readings, retaining all 64 pages; full visual QA remains incomplete. See `docs/M2_INGESTION_REPORT.md` for approved assets and retrieval restrictions. Do not create substitute student facts or academic facts.
 
 ## 1. Product goal
 
@@ -239,7 +239,7 @@ Observed characteristics of this supplied file:
 - A generic embedded-image extraction pass returned repeated references to the same four image payloads across multiple pages. Do not equate raw image-object count with the number of logical figures, and do not infer page placement from an extracted image filename alone. Use layout/page-region associations, figure captions, and page renders; deduplicate binary payloads by checksum while retaining every distinct placement reference.
 - The final page contains source attribution and a Creative Commons Attribution-ShareAlike notice. Preserve attribution and license metadata in the document record and in any redistributed derivative artefacts.
 
-This preflight is an observed test result, not a claim that the full ingestion pipeline has already been configured or that the document is fully ingested. All five PDFs are now present, but only PHYS 230 has a completed visual preflight; each of the other four gets its own preflight in M2.
+These findings describe the original representative preflight. M2 has since independently preflighted and ingested all five PDFs. Contact sheets were inspected for every page, but full readable-resolution visual QA remains incomplete for every document; the current baseline and review coverage are recorded in `docs/M2_INGESTION_REPORT.md`.
 
 ### 5.2 Canonical domain model
 
@@ -675,7 +675,7 @@ The canonical sample suite is `data/samples/test-conversations.json`. It was rec
 
 - Turn 1: “How does the Bohr model explain the lines in the hydrogen spectrum?” Resolve `student-001`'s Fall 2026 PHYS 350 enrollment to the catalogue material titled “Bohr model” at `course-materials/phys350-bohr-model.pdf`. Explain only what the retrieved reading supports, including quantized energy levels and transitions only when supported by the source, and cite page-level evidence.
 - Turn 2: “According to the diagram in that reading, how many electrons can the second energy level hold?” Resolve “that reading” to the same document and “the diagram” to its figure/page asset. Answer the value shown by the diagram, cite the page/figure, and distinguish an explicit diagram label from an inferred scientific fact. Do not guess if the PDF/figure is unavailable, unreadable, or does not specify the value. For the commonly taught shell-capacity value of eight, assert `8` in the automated expected-answer check only after the supplied PDF diagram has been inspected and confirms it.
-- This conversation is blocked for final content/citation validation until the actual PHYS 350 PDF bytes are present under `data/samples/course-materials/`. Until then, the expected behavior is a transparent missing-source response, not an invented citation.
+- M2 has ingested the supplied PHYS 350 PDF and verified Figure 2 on PDF page 4: its label explicitly states up to 8 electrons for the second energy level. The canonical fixture asks for clarification when a diagram reference is ambiguous, then verifies the value after an explicit Figure 2/page 4 reference. Retrieval/citation regressions pass; authenticated multi-turn answer validation remains pending. Missing or unreviewed evidence must still produce a transparent abstention.
 
 **Planner conversation — initial 12-unit request and 8-unit follow-up**
 
@@ -753,7 +753,7 @@ Never commit a real secret. Seed development identities with documented, disposa
 
 - Recommendations are calculated from the supplied snapshot, not a live registration or degree-audit system.
 - The app cannot guarantee course seats, timetable compatibility, instructor availability, or official adviser approval unless those data sources are added later.
-- Visual understanding depends on extraction quality. If an equation, chart, or table is unreadable or unreviewed, the app must disclose that limitation and avoid exact claims. All five readings are present, but none has been ingested yet; M2 must complete ingestion and visual QA before full-corpus acceptance.
+- Visual understanding depends on extraction quality. If an equation, chart, or table is unreadable or unreviewed, the app must disclose that limitation and avoid exact claims. All five readings are locally ingested, but only 4 of 50 visual assets are approved and every document's full visual QA remains incomplete. Full-corpus acceptance still requires the remaining review and end-to-end validation.
 - Degree progress is only as reliable as the structure and completeness of the supplied requirements JSON. Unsupported rules must be marked as indeterminate.
 - Synthetic student records and sample data are for demonstration only.
 
