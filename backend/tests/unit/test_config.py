@@ -11,7 +11,7 @@ from app.core.config import REPO_ROOT, Settings
 
 
 def make_settings(**overrides: object) -> Settings:
-    return Settings(_env_file=None, **overrides)  # type: ignore[arg-type]
+    return Settings(_env_file=None, **overrides)  # type: ignore[arg-type, call-arg]
 
 
 def test_scenario_terms_default_to_the_fixed_supplied_values() -> None:

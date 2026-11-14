@@ -1,0 +1,9 @@
+# Normalise all text to LF in the repository so Windows checkouts do not create
+# whole-file diffs. Binary artefacts stay byte-for-byte.
+* text=auto eol=lf
+*.pdf binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary

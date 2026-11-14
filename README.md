@@ -25,7 +25,7 @@ assistant says so instead of guessing.
 
 | Criterion | Evidence | Result |
 |---|---|---|
-| Repository is standalone and clean | Own git repo, two commits, no remote, no secrets staged | ✅ |
+| Repository is standalone and clean | Own git repo, no secrets staged, PDF bytes gitignored | ✅ |
 | Python toolchain reproducible | `uv.lock`, Python 3.12 pinned, `uv sync --all-groups` | ✅ |
 | Scenario terms are configuration, not clock-derived | `Settings.current_term` / `next_term`, equal-term combinations rejected | ✅ |
 | Production cannot start with placeholders | `assert_production_ready()` rejects local auth and `replace-me` secrets | ✅ |
@@ -35,7 +35,7 @@ assistant says so instead of guessing.
 | Student fixtures validate | 2 records, unique IDs, references resolve, enrolled terms equal Fall 2026, no completed/enrolled conflict | ✅ |
 | Validator fails closed on bad data | A deliberately corrupted copy produced 6 expected failures (bad prerequisite, unsupported rule, out-of-bounds `count`, duplicate ID, completed∩enrolled overlap, wrong enrolment term) | ✅ |
 | Quality gates green | `ruff` clean, `mypy` clean (14 files), `pytest` 17 passed | ✅ |
-| Dataset report | `validate_datasets.py` → 39 passed, 0 warnings, 0 errors, 0 pending; `--require-complete` exits `0` | ✅ |
+| Dataset report | `validate_datasets.py` → 61 passed, 0 warnings, 0 errors, 0 pending; `--require-complete` exits `0` | ✅ |
 
 M0 deliberately stops at the data boundary. It contains **no** prerequisite engine, no
 PDF ingestion, no API, and no cloud resources — those are M1–M6.
@@ -154,11 +154,12 @@ M1 is pure deterministic Python: no model provider, no database, no UI, no netwo
 | Unit cap enforced, never mutated | 12-unit plan = 110 + 150 + 340; 8-unit plan = 110 + 150 with 340 `deferred` and still `eligible`; request caps never touch catalogue policy | ✅ |
 | No filler courses | In-progress ENGL 120 suppresses ENGL 130 as a recommendation; it stays an alternative | ✅ |
 | In-progress is not completed credit | `calculate_degree_progress` reports `in_progress`; `satisfied_by` only ever contains completed courses | ✅ |
-| Quality gates green | `ruff` clean, `mypy` clean (23 files), `pytest` 112 passed | ✅ |
-| Validator includes the runtime model | `validate_datasets.py` now builds the canonical model too → 39 passed | ✅ |
+| Quality gates green | `ruff` clean, `mypy` clean (33 source files including tests), `pytest` 125 passed | ✅ |
+| Validator includes the runtime model | `validate_datasets.py` now builds the canonical model too → 61 passed | ✅ |
 
-Test coverage by area: term ordering (9), adapters (27), eligibility (17), degree progress
-(11), planning (19), fixture loading (12), settings/validator (17).
+Test coverage by area: term ordering (9), adapters (33), eligibility (20), degree progress
+(11), planning (19), fixture loading (12), settings/validator (18), conversation fixtures
+(3). Total: 125.
 
 Two test expectations were corrected during M1 because the code was right:
 
@@ -171,9 +172,10 @@ Two test expectations were corrected during M1 because the code was right:
 
 ## Next: M2 — reading ingestion and retrieval
 
-Scope: Docling-based layout extraction for all five PDFs, page-level provenance, versioned
-activation, and course-scoped retrieval with citations. Nothing here may be replaced by
-model knowledge.
+Scope: PyMuPDF + pdfplumber layout extraction (behind a `PdfParser` seam; Docling remains
+the swap-in for layouts the simple parser cannot recover) for all five PDFs, page-level
+provenance, versioned activation, restricted-content classification, and course-scoped
+retrieval with citations. Nothing here may be replaced by model knowledge.
 
 Exit criteria:
 
@@ -207,6 +209,6 @@ See [`docs/decisions/0001-mvp-stack.md`](docs/decisions/0001-mvp-stack.md) and
 
 ## Security housekeeping
 
-This directory is its own repository with **no remote**. The parent workspace
-(`/mnt/c/Users/aziz_`) is an unrelated project whose `.git/config` contains a plaintext
-GitHub token — rotate it and add this project as a clean, separate remote.
+This directory is its own repository with `origin` at `github.com/aziz0519/course-finder-agent`.
+The parent workspace (`/mnt/c/Users/aziz_`) is an unrelated project whose `.git/config`
+contains a plaintext GitHub token — rotate it and never copy it into this repository.

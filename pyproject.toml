@@ -13,6 +13,7 @@ dependencies = [
     "pymupdf>=1.24",
     "python-multipart>=0.0.9",
     "httpx>=0.27",
+    "pdfplumber>=0.11.10",
 ]
 
 [dependency-groups]
@@ -53,8 +54,8 @@ select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
 
 [tool.mypy]
 python_version = "3.12"
-mypy_path = "backend"
-files = ["backend/app", "scripts"]
+mypy_path = "backend:scripts"
+files = ["backend/app", "backend/tests", "scripts"]
 check_untyped_defs = true
 warn_unused_ignores = true
 warn_redundant_casts = true

@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+import json
+from copy import deepcopy
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -88,3 +91,32 @@ def test_require_complete_turns_pending_inputs_into_exit_code_two(
 
     assert validator.main(["--data-root", str(data_root), "--require-complete"]) == 2
     assert "INCOMPLETE" in capsys.readouterr().out
+
+
+def _supplied_fixtures() -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]:
+    root = validator.REPO_ROOT / "data"
+
+    def load(relative: str) -> dict[str, Any]:
+        return json.loads((root / relative).read_text(encoding="utf-8"))
+
+    return (
+        load("samples/test-conversations.json"),
+        load("samples/course-catalog.json"),
+        load("samples/student-records.json"),
+    )
+
+
+def test_conversation_validator_rejects_an_unverified_diagram_value() -> None:
+    suite, catalogue, students = _supplied_fixtures()
+    tampered = deepcopy(suite)
+    tutor = next(item for item in tampered["conversations"] if item["kind"] == "tutor")
+    tutor["turns"][1]["expected_answer_value"] = 8
+
+    report = validator.Report()
+    validator.validate_conversations(report, tampered, catalogue, students)
+
+    assert any(
+        level == "error" and check == "Tutor value not asserted before verification"
+        for level, check, _ in report.findings
+    )
+

@@ -2,6 +2,7 @@
 
 - **Status:** accepted for the MVP; two decisions remain open
 - **Date:** 2026-11-13
+- **Updated:** 2026-11-14 — fixture provenance resolved; parser decision clarified below.
 - **Context:** AGENTS.md specifies a Next.js + FastAPI + LangGraph + PostgreSQL/pgvector
   + Docling + ECS/Cognito stack. The objective is a working MVP of the course finder,
   not a production platform. Several specified components are large dependencies that
@@ -58,11 +59,19 @@ quality gate. `PdfParser` is the seam for swapping Docling in per document.
 
 1. **Frontend:** Gradio (recommended), Next.js, or FastAPI + Jinja/HTMX. Blocks M5 only.
 2. **Infrastructure tier:** local-first (recommended) or the tier-1 demo stack. Blocks M6.
-3. **Fixture provenance:** the authoritative JSON fixtures and four of five PDFs are not
-   in the repository. They must be supplied before M1 can be verified.
+
+## Resolved
+
+- **Fixture provenance (2026-11-14):** the authoritative JSON fixtures and all five PDFs
+  are now present. Checksums and page counts are recorded in
+  `data/manifests/course_readings_manifest.json` and enforced by
+  `scripts/validate_datasets.py`.
+- **Parser scope (2026-11-14):** M2 implements `PdfParser` with PyMuPDF + pdfplumber as
+  described above. Docling is not installed for the MVP; it remains a documented
+  per-document swap-in and does not change the M2 quality gates.
 
 ## Revisit when
 
 - More than one concurrent writer needs the database.
 - Real multi-tenant authentication is required.
-- Any of the remaining four PDFs turns out to defeat the simple parser.
+- Any of the other four readings defeats the simple parser during its M2 preflight.

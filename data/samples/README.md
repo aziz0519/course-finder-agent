@@ -6,7 +6,8 @@ Authoritative MVP fixtures. Copy the supplied files here **without editing them*
 |---|---|
 | `course-catalog.json` | 14 courses, 1 programme, 5 requirement groups, `policies.max_units_per_term: 16`, `current_term: "Fall 2026"`, `next_term: "Spring 2027"` |
 | `student-records.json` | 2 students: `student-001` (Sophomore) and `student-002` (Freshman) |
-| `course-materials/*.pdf` | 5 catalogue-referenced readings (1 of 5 currently supplied) |
+| `course-materials/*.pdf` | 5 catalogue-referenced readings (5 of 5 currently supplied) |
+| `test-conversations.json` | Canonical multi-turn regression suite (reconstructed from AGENTS.md section 14; provenance recorded in the file) |
 
 Structural expectations are encoded in `../schemas/`. Cross-record rules — unique IDs,
 resolvable references, term consistency, completed/enrolled conflicts, the 16-unit

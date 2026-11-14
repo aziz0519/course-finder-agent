@@ -1,0 +1,119 @@
+{
+  "suite_version": 1,
+  "provenance": "Reconstructed on 2026-11-14 from AGENTS.md section 14 because the originally referenced data/samples/test-conversations.json was not present in the repository. This is a test script, not academic evidence.",
+  "student_id": "student-001",
+  "scenario": {
+    "current_term": "Fall 2026",
+    "next_term": "Spring 2027"
+  },
+  "conversations": [
+    {
+      "conversation_id": "tutor-phys350-bohr-model",
+      "kind": "tutor",
+      "description": "PHYS 350 Bohr model explanation followed by a diagram follow-up. Expected citations and the diagram value remain blocked until the reading is ingested and the diagram is visually verified.",
+      "turns": [
+        {
+          "turn": 1,
+          "user": "How does the Bohr model explain the lines in the hydrogen spectrum?",
+          "expected_course_code": "PHYS 350",
+          "expected_document_title": "Bohr model",
+          "expected_source_filename": "course-materials/phys350-bohr-model.pdf",
+          "response_requirements": [
+            "Resolve PHYS 350 from the student's Fall 2026 enrollments.",
+            "Explain only what the supplied reading supports.",
+            "Cite the reading title and a 1-based PDF page for every material claim.",
+            "State that quantized energy levels and transitions are supported only if the source says so."
+          ],
+          "citation_requirements": {
+            "document_title": true,
+            "pdf_page": true,
+            "abstain_when_source_missing": true
+          },
+          "value_verification_status": "not_applicable"
+        },
+        {
+          "turn": 2,
+          "user": "According to the diagram in that reading, how many electrons can the second energy level hold?",
+          "expected_course_code": "PHYS 350",
+          "expected_document_title": "Bohr model",
+          "expected_source_filename": "course-materials/phys350-bohr-model.pdf",
+          "response_requirements": [
+            "Resolve 'that reading' to the PHYS 350 Bohr model document.",
+            "Resolve 'the diagram' to the figure/page asset in that document.",
+            "Distinguish an explicit diagram label from an inferred scientific fact.",
+            "Do not guess if the PDF, figure, or value is unavailable or unreadable.",
+            "Cite the PDF page and figure label when available."
+          ],
+          "citation_requirements": {
+            "document_title": true,
+            "pdf_page": true,
+            "abstain_when_source_missing": true
+          },
+          "expected_answer_value": null,
+          "value_verification_status": "pending_diagram_inspection"
+        }
+      ]
+    },
+    {
+      "conversation_id": "planner-spring-2027-unit-caps",
+      "kind": "planner",
+      "description": "Spring 2027 planning under a 12-unit request, then an 8-unit follow-up. The cap is thread state; the catalogue maximum stays 16.",
+      "turns": [
+        {
+          "turn": 1,
+          "user": "What should I take in Spring 2027 to progress my degree? Keep it to 12 units.",
+          "request_unit_cap": 12,
+          "expected_recommended_courses": [
+            "PHYS 110",
+            "MATH 150",
+            "PHYS 340"
+          ],
+          "expected_total_units": 12,
+          "expected_deferred_courses": [],
+          "expected_alternative_courses": [
+            "ENGL 130"
+          ],
+          "expected_excluded_courses": [
+            "PHYS 120",
+            "PHYS 490"
+          ],
+          "expected_catalogue_max_units": 16,
+          "response_requirements": [
+            "Apply the request cap without mutating the catalogue policy or student record.",
+            "Explain that PHYS 340 is prerequisite-eligible because PHYS 230 is completed.",
+            "Explain that PHYS 340 is conditional on successful completion of in-progress PHYS 350.",
+            "Do not recommend PHYS 120 or PHYS 490 for Spring 2027.",
+            "Do not add ENGL 130 merely to fill unused capacity while ENGL 120 is in progress."
+          ]
+        },
+        {
+          "turn": 2,
+          "user": "I have accepted a part-time internship, so cap me at 8 units.",
+          "request_unit_cap": 8,
+          "expected_recommended_courses": [
+            "PHYS 110",
+            "MATH 150"
+          ],
+          "expected_total_units": 8,
+          "expected_deferred_courses": [
+            "PHYS 340"
+          ],
+          "expected_alternative_courses": [
+            "ENGL 130"
+          ],
+          "expected_excluded_courses": [
+            "PHYS 120",
+            "PHYS 490"
+          ],
+          "expected_catalogue_max_units": 16,
+          "response_requirements": [
+            "Recompute the schedule for the new cap instead of editing the displayed total.",
+            "Explain that PHYS 340 is deferred, not ineligible.",
+            "Never exceed 8 units in the revised proposal.",
+            "Keep the 8-unit cap for later turns unless the user explicitly changes it."
+          ]
+        }
+      ]
+    }
+  ]
+}
