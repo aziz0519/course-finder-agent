@@ -23,6 +23,9 @@ assistant says so instead of guessing.
 
 ## M0 exit gate — confirmed
 
+Historical results below describe M0 at completion. Current verification is recorded
+in the M2 section.
+
 | Criterion | Evidence | Result |
 |---|---|---|
 | Repository is standalone and clean | Own git repo, no secrets staged, PDF bytes gitignored | ✅ |
@@ -45,7 +48,7 @@ PDF ingestion, no API, and no cloud resources — those are M1–M6.
 ```bash
 uv sync --all-groups          # creates .venv with Python 3.12
 cp .env.example .env          # placeholders only; safe for local development
-make validate                 # 61 checks against the supplied fixtures
+make validate                 # 62 checks against the supplied fixtures
 make ingest                   # all five PDFs; local versioned artifacts and QA reports
 make check                    # lint + typecheck + tests
 ```
@@ -143,6 +146,7 @@ These are not negotiable, and every milestone preserves them:
 ## M1 exit gate — confirmed
 
 M1 is pure deterministic Python: no model provider, no database, no UI, no network.
+The counts below are historical M1 completion results; see M2 for current verification.
 
 | Criterion | Evidence | Result |
 |---|---|---|
@@ -186,7 +190,7 @@ No model calls, database server, or AWS credentials are needed.
 | Citations | Title, 1-based PDF page, checksum/version, chunk/asset IDs and bbox; scoped round-trip resolver |
 | Versioning | Idempotent ingestion, atomic active pointer, failed versions cannot displace an active one |
 | Safety | PHYS 230 and HIST 250 fully quarantined; other weapons-context pages restricted |
-| Verification | `make check`: lint/typecheck clean, **170 tests pass**; strict dataset validation: **61 passed** |
+| Verification (2026-11-14) | `make check`: lint clean, mypy clean (**45 source files**), **180 tests pass**; strict dataset validation: **62 passed**, no warnings/errors/pending inputs |
 
 The Bohr shell-capacity value is now source-verified: Figure 2 on PDF page 4 explicitly
 labels up to eight electrons for the second level. The conversation fixture records that

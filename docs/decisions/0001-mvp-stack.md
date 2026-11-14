@@ -39,7 +39,8 @@ API stays the boundary.
 
 The preflight on `phys230-critical-mass.pdf` already showed PyMuPDF and pdfplumber
 extract native text and tables. Docling is heavy, version-sensitive, and its value grows
-with layout complexity we cannot assess until the other four PDFs arrive. Section 5.3.3
+with layout complexity. All five PDFs have now been ingested; remaining unparsed
+equations and unreviewed visuals are recorded in the M2 baseline. Section 5.3.3
 explicitly permits a displayed equation to be marked `equation_unparsed` with a retained
 crop, so a simpler parser is a conforming MVP state rather than a shortcut around the
 quality gate. `PdfParser` is the seam for swapping Docling in per document.
@@ -74,4 +75,4 @@ quality gate. `PdfParser` is the seam for swapping Docling in per document.
 
 - More than one concurrent writer needs the database.
 - Real multi-tenant authentication is required.
-- Any of the other four readings defeats the simple parser during its M2 preflight.
+- Remaining extraction failures require a richer parser to meet the visual QA gates.

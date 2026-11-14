@@ -65,8 +65,9 @@ Reported confidence is a parser heuristic, not calibrated extraction accuracy.
 
 ## Reproducibility and regression results
 
-- `make check`: Ruff passes; mypy passes (44 files); **170 tests pass**.
-- `uv run python scripts/validate_datasets.py --require-complete`: **61 passed**,
+- Re-verified 2026-11-14: `make check`: Ruff passes; mypy passes (45 source files);
+  **180 tests pass**.
+- `uv run python scripts/validate_datasets.py --require-complete`: **62 passed**,
   zero warnings/errors/pending inputs.
 - Full-corpus tests verify page coverage, source checksums, attribution, reference
   inventory, table integrity, Bohr figure/citation evidence and expected value,
