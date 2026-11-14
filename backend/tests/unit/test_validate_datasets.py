@@ -111,6 +111,7 @@ def test_conversation_validator_rejects_an_unverified_diagram_value() -> None:
     tampered = deepcopy(suite)
     tutor = next(item for item in tampered["conversations"] if item["kind"] == "tutor")
     tutor["turns"][1]["expected_answer_value"] = 8
+    tutor["turns"][1]["value_verification_status"] = "pending_diagram_inspection"
 
     report = validator.Report()
     validator.validate_conversations(report, tampered, catalogue, students)
@@ -119,4 +120,3 @@ def test_conversation_validator_rejects_an_unverified_diagram_value() -> None:
         level == "error" and check == "Tutor value not asserted before verification"
         for level, check, _ in report.findings
     )
-

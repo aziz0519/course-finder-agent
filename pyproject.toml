@@ -10,10 +10,10 @@ dependencies = [
     "pydantic>=2.9",
     "pydantic-settings>=2.5",
     "jsonschema>=4.23",
-    "pymupdf>=1.24",
+    "pymupdf==2.1",
     "python-multipart>=0.0.9",
     "httpx>=0.27",
-    "pdfplumber>=0.11.10",
+    "pdfplumber==0.11.10",
 ]
 
 [dependency-groups]

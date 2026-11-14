@@ -10,7 +10,7 @@
     {
       "conversation_id": "tutor-phys350-bohr-model",
       "kind": "tutor",
-      "description": "PHYS 350 Bohr model explanation followed by a diagram follow-up. Expected citations and the diagram value remain blocked until the reading is ingested and the diagram is visually verified.",
+      "description": "PHYS 350 Bohr model explanation followed by a diagram follow-up. M2 verified the explicit eight-electron label in Figure 2 on PDF page 4; a generic diagram reference is ambiguous unless conversation evidence selects it.",
       "turns": [
         {
           "turn": 1,
@@ -49,8 +49,8 @@
             "pdf_page": true,
             "abstain_when_source_missing": true
           },
-          "expected_answer_value": null,
-          "value_verification_status": "pending_diagram_inspection"
+          "expected_answer_value": 8,
+          "value_verification_status": "verified_from_source"
         }
       ]
     },

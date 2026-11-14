@@ -6,10 +6,14 @@ Ingest five short course readings (roughly 9–17 pages each) so the Tutor can a
 
 ## Recommended approach
 
-Use **Docling for layout-aware conversion**, **selective OCR and vision/formula enrichment for difficult regions**, **PostgreSQL + pgvector for retrieval metadata and embeddings**, and **S3 for source PDFs and derived visual artefacts** in AWS. Keep the parser behind an interface so it can be replaced without changing agent tools or domain logic.
+The implemented M2 baseline uses **PyMuPDF 2.1 + pdfplumber 0.11.10** behind `PdfParser`,
+**SQLite + scoped FTS5** behind `Retriever`, and versioned local artifacts, per
+[ADR 0001](docs/decisions/0001-mvp-stack.md). Docling/targeted OCR and vision enrichment,
+PostgreSQL + pgvector, and private S3 remain replacement adapters for difficult layouts
+and AWS. See [M2 usage](docs/M2_READINGS.md) for the actual runtime and QA limitations.
 
 1. Preflight each document and build a source manifest with checksum, page count, page dimensions, text-layer availability, attribution, and current ingestion version.
-2. Run Docling's standard PDF pipeline first. Preserve reading order, section hierarchy, text blocks, table structure, captions, page references, and geometry.
+2. Run the active native-first parser. Preserve reading order, headings, text blocks, table structure, captions, page references, and geometry.
 3. Render every page and retain page images. Extract picture/diagram/chart/table crops with their bounding boxes and source-page association.
 4. Use OCR only on image-only or low-quality pages/regions. Do not run blanket OCR on a born-digital document with a healthy text layer.
 5. Apply formula recognition to pages with displayed equations and chart/vision enrichment to detected charts and diagrams. Store the original crop beside the extracted representation.
@@ -29,7 +33,9 @@ File: `data/samples/course-materials/phys230-critical-mass.pdf` (PHYS 230, “Cr
 - A generic embedded-image extractor returns repeated copies of the same four underlying image payloads on multiple pages. De-duplicate binary images by checksum while retaining separate page-placement references from layout data.
 - The last page contains attribution and a Creative Commons Attribution-ShareAlike notice; preserve it in document metadata.
 
-This is a preflight and extraction smoke test. Full Docling ingestion and the final parser/model configuration have not yet been run.
+M2 now runs native-first ingestion over all five files. This preflight remains historical
+source context; it is not complete visual approval. The checked-in review manifest and
+[M2 baseline](docs/M2_INGESTION_REPORT.md) record what is actually approved.
 
 ## Data model minimum
 
@@ -65,4 +71,7 @@ The PHYS 230 reading includes nuclear weapon-design material. Ingestion must lab
 
 ## Remaining work
 
-Four catalogue-referenced readings are still pending: PHYS 350 / Bohr model, ENGL 120 / The Raven, HIST 210 / Niels Bohr, and HIST 250 / Demon core. Run a separate preflight for each; do not assume the other PDFs have the same text-layer or visual layout profile as the PHYS 230 sample.
+All five readings are locally ingested with separate page manifests, contact sheets,
+crops, attribution, and quality reports. Full visual review, reliable LaTeX, selective
+OCR/VLM repair when needed, exact chart digitization, and reviewed safe excerpts for
+quarantined readings remain pending. No unreviewed source asset is answerable.

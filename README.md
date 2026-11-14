@@ -14,7 +14,7 @@ assistant says so instead of guessing.
 |---|---|---|
 | **M0** | Repo scaffold, typed settings, dataset contract, Phase 0 validator | ✅ **complete** (2026-11-13) |
 | **M1** | Deterministic domain core: adapters, prerequisite eligibility, degree progress | ✅ **complete** (2026-11-13) |
-| M2 | Reading ingestion and course-scoped retrieval with page citations | next |
+| **M2** | Reading ingestion and course-scoped retrieval with page citations | **implemented** — visual QA remains gated |
 | M3 | Conversation state, supervisor routing, tutor and planner | |
 | M4 | API, local auth, RBAC and negative security tests | |
 | M5 | UI (Gradio over the API is the recommendation; Next.js remains supported) | |
@@ -45,7 +45,8 @@ PDF ingestion, no API, and no cloud resources — those are M1–M6.
 ```bash
 uv sync --all-groups          # creates .venv with Python 3.12
 cp .env.example .env          # placeholders only; safe for local development
-make validate                 # 39 checks against the supplied fixtures
+make validate                 # 61 checks against the supplied fixtures
+make ingest                   # all five PDFs; local versioned artifacts and QA reports
 make check                    # lint + typecheck + tests
 ```
 
@@ -115,6 +116,7 @@ docs/decisions/   architecture decision records
 | `make sync` | Create the venv and install dependencies |
 | `make validate` | Phase 0 dataset validation |
 | `make validate-strict` | Validation that fails on any missing input |
+| `make ingest` | Ingest all five readings with checksum-bound review and QA gates |
 | `make test` | Run the test suite |
 | `make lint` / `make fmt` | Ruff check / format |
 | `make typecheck` | mypy |
@@ -170,21 +172,32 @@ Two test expectations were corrected during M1 because the code was right:
   covered by PHYS 350, so `physics-electives` is `remaining` with `courses_short=1` —
   not `in_progress`. A choose-group only becomes `in_progress` once its count is covered.
 
-## Next: M2 — reading ingestion and retrieval
+## M2 — reading ingestion and retrieval
 
-Scope: PyMuPDF + pdfplumber layout extraction (behind a `PdfParser` seam; Docling remains
-the swap-in for layouts the simple parser cannot recover) for all five PDFs, page-level
-provenance, versioned activation, restricted-content classification, and course-scoped
-retrieval with citations. Nothing here may be replaced by model knowledge.
+Implemented with pinned PyMuPDF + pdfplumber behind `PdfParser`, immutable local
+artifacts, a SQLite version registry, and course/document-filtered FTS5 BM25 retrieval.
+No model calls, database server, or AWS credentials are needed.
 
-Exit criteria:
+| Check | Result |
+|---|---|
+| Source integrity and page coverage | All five checksums/page counts match; **64/64 pages** retained |
+| Visual inventory and provenance | **50** cropped placements; tables retain structured cells and header-aware chunks |
+| Review gating | **4** inspected assets approved; remaining visuals/equations abstain |
+| Citations | Title, 1-based PDF page, checksum/version, chunk/asset IDs and bbox; scoped round-trip resolver |
+| Versioning | Idempotent ingestion, atomic active pointer, failed versions cannot displace an active one |
+| Safety | PHYS 230 and HIST 250 fully quarantined; other weapons-context pages restricted |
+| Verification | `make check`: lint/typecheck clean, **170 tests pass**; strict dataset validation: **61 passed** |
 
-1. Page coverage matches each source PDF; every page has an extraction status.
-2. Figures, tables, and displayed equations get crops plus page/region provenance, with
-   `needs_review` where extraction is uncertain.
-3. Reading answers cite document title and 1-based PDF page; unreadable content produces an
-   abstention.
-4. Restricted nuclear-content chunks are classified and excluded from student retrieval.
+The Bohr shell-capacity value is now source-verified: Figure 2 on PDF page 4 explicitly
+labels up to eight electrons for the second level. The conversation fixture records that
+verification. A generic “the diagram” reference still requires clarification when
+conversation evidence leaves multiple figures plausible.
+
+See [M2 usage and boundaries](docs/M2_READINGS.md) and the
+[ingestion baseline](docs/M2_INGESTION_REPORT.md). Full visual QA is **not** complete:
+unreviewed formulas/charts/tables remain unavailable, and no exact chart digitization
+or OCR/VLM enrichment is enabled. Tutor answer generation and conversation state are M3;
+authentication and HTTP delivery remain M4.
 
 ## Open decisions
 
@@ -198,10 +211,13 @@ See [`docs/decisions/0001-mvp-stack.md`](docs/decisions/0001-mvp-stack.md) and
 
 ## Known limitations
 
-- All five readings are present and structurally validated, but **no reading has been
-  ingested yet**, so the assistant cannot answer content questions or cite a page until
-  M2.
-- Only PHYS 230 has a completed visual preflight; the other four need their own.
+- All five readings are locally ingested, but no chat/API is exposed until M3/M4.
+- Only explicitly reviewed visuals are available. Remaining assets stay `needs_review`;
+  formula-heavy pages conservatively withhold overlapping prose pending finer extraction.
+- The two nuclear-system readings are entirely withheld from student retrieval pending
+  a reviewed safe-excerpt set. Full PDFs/page renders are administrator-only artifacts.
+- The retrieval scope is a server-side service contract, not authentication; M4 must
+  construct it from verified identities and authorization decisions.
 - Degree progress is only as reliable as the supplied requirements JSON.
 - No seats, timetable, instructor, or grade data exists in the fixtures and none will be
   invented.
