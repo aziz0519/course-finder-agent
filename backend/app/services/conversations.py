@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from uuid import uuid4
 
 from app.agents.academic_planner import plan, requested_unit_cap
+from app.agents.answer_composer import AnswerComposer, OfflineAnswerComposer
 from app.agents.course_tutor import tutor
-from app.agents.models import AgentResponse
+from app.agents.models import AgentResponse, TraceEvent
 from app.agents.supervisor import route_intent
 from app.ingestion.dataset import AcademicDataset
 from app.repositories.conversations import ConversationRepository, ConversationThread
@@ -19,10 +21,12 @@ class ConversationService:
         repository: ConversationRepository,
         dataset_loader: Callable[[], AcademicDataset],
         retriever: Retriever,
+        composer: AnswerComposer | None = None,
     ):
         self.repository = repository
         self.dataset_loader = dataset_loader
         self.retriever = retriever
+        self.composer = composer or OfflineAnswerComposer()
 
     def create(self, owner_user_id: str, authorized_student_id: str) -> ConversationThread:
         # Validate against the current source rather than persisting a student snapshot.
@@ -44,11 +48,23 @@ class ConversationService:
         dataset = self.dataset_loader()
         student = dataset.student(thread.authorized_student_id)
         intent = route_intent(message, thread.state)
+        supervisor_trace = TraceEvent(
+            trace_id=f"trace-{uuid4()}",
+            agent_name="supervisor",
+            status="ok" if intent != "unsupported" else "unsupported",
+            metadata={"intent": intent},
+        )
 
         if intent == "planner":
             cap = requested_unit_cap(message)
             effective_preference = cap if cap is not None else thread.state.planning_unit_cap
-            response = plan(student, dataset.catalog, unit_cap=effective_preference)
+            response = plan(
+                student,
+                dataset.catalog,
+                unit_cap=effective_preference,
+                catalogue_version=dataset.catalogue_source.source_version,
+                student_record_version=dataset.students_source.source_version,
+            )
             state = thread.state.model_copy(
                 update={"last_intent": "planner", "planning_unit_cap": effective_preference}
             )
@@ -60,6 +76,7 @@ class ConversationService:
                 dataset.catalog,
                 scope,
                 self.retriever,
+                self.composer,
             )
         else:
             response = AgentResponse(
@@ -72,5 +89,18 @@ class ConversationService:
             )
             state = thread.state.model_copy(update={"last_intent": "unsupported"})
 
-        self.repository.append_turn(thread, message, response, state)
+        traces = [supervisor_trace]
+        if intent in ("planner", "tutor"):
+            traces.append(
+                TraceEvent(
+                    trace_id=f"trace-{uuid4()}",
+                    agent_name=intent,
+                    status=response.status,
+                    metadata={"intent": intent},
+                )
+            )
+        response = response.model_copy(
+            update={"trace_ids": tuple(trace.trace_id for trace in traces)}
+        )
+        self.repository.append_turn(thread, message, response, state, traces=tuple(traces))
         return response

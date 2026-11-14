@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import re
 
-from app.agents.models import AgentResponse, PlanningCourse, PlanningPayload
+from app.agents.models import AcademicEvidence, AgentResponse, PlanningCourse, PlanningPayload
 from app.domain.catalog import AcademicCatalog
 from app.domain.models import Student
 from app.domain.planning import ScheduleProposal, propose_schedule
@@ -26,7 +26,12 @@ def _course(entry) -> PlanningCourse:
     )
 
 
-def _payload(proposal: ScheduleProposal) -> PlanningPayload:
+def _payload(
+    proposal: ScheduleProposal,
+    *,
+    catalogue_version: str,
+    student_record_version: str,
+) -> PlanningPayload:
     return PlanningPayload(
         target_term=proposal.target_term.label,
         catalogue_max_units=proposal.catalogue_max_units,
@@ -36,6 +41,20 @@ def _payload(proposal: ScheduleProposal) -> PlanningPayload:
         recommended=tuple(_course(entry) for entry in proposal.recommended),
         deferred=tuple(_course(entry) for entry in proposal.deferred),
         alternatives=tuple(_course(entry) for entry in proposal.alternatives),
+        evidence=(
+            AcademicEvidence(
+                source_type="catalogue",
+                source_version=catalogue_version,
+                description=(
+                    "Course offerings, prerequisites, units, policy, and degree requirements."
+                ),
+            ),
+            AcademicEvidence(
+                source_type="student_record",
+                source_version=student_record_version,
+                description="Completed courses and current Fall 2026 enrolments.",
+            ),
+        ),
     )
 
 
@@ -44,6 +63,8 @@ def plan(
     catalog: AcademicCatalog,
     *,
     unit_cap: int | None,
+    catalogue_version: str,
+    student_record_version: str,
 ) -> AgentResponse:
     proposal = propose_schedule(student, catalog, requested_unit_cap=unit_cap)
     courses = ", ".join(
@@ -81,5 +102,9 @@ def plan(
         status="ok",
         intent="planner",
         text=text,
-        planning=_payload(proposal),
+        planning=_payload(
+            proposal,
+            catalogue_version=catalogue_version,
+            student_record_version=student_record_version,
+        ),
     )

@@ -102,6 +102,7 @@ class Retriever(Protocol):
         asset_id: str | None = None,
         page_number: int | None = None,
         visual_type: VisualType | None = None,
+        label: str | None = None,
         exact: bool = False,
     ) -> VisualResult: ...
 
@@ -287,6 +288,7 @@ class LocalRetriever:
         asset_id: str | None = None,
         page_number: int | None = None,
         visual_type: VisualType | None = None,
+        label: str | None = None,
         exact: bool = False,
     ) -> VisualResult:
         """Use a thread's explicit document/asset antecedent; never search other documents."""
@@ -302,6 +304,7 @@ class LocalRetriever:
             and (asset_id is None or asset.asset_id == asset_id)
             and (page_number is None or asset.pdf_page_number == page_number)
             and (visual_type is None or asset.visual_type == visual_type)
+            and (label is None or (asset.label and asset.label.casefold() == label.casefold()))
         ]
         if len(matches) > 1:
             return VisualResult(

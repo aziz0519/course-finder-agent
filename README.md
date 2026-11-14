@@ -15,7 +15,7 @@ assistant says so instead of guessing.
 | **M0** | Repo scaffold, typed settings, dataset contract, Phase 0 validator | ✅ **complete** (2026-11-13) |
 | **M1** | Deterministic domain core: adapters, prerequisite eligibility, degree progress | ✅ **complete** (2026-11-13) |
 | **M2** | Reading ingestion and course-scoped retrieval with page citations | **implemented** — visual QA remains gated |
-| M3 | Conversation state, supervisor routing, tutor and planner | **in progress** — baseline workflow implemented |
+| **M3** | Conversation state, supervisor routing, tutor and planner | ✅ **complete** (2026-11-14) |
 | M4 | API, local auth, RBAC and negative security tests | |
 | M5 | UI (Gradio over the API is the recommendation; Next.js remains supported) | |
 | M6 | Deployable demo (container + single CDK stack) | |
@@ -203,6 +203,17 @@ unreviewed formulas/charts/tables remain unavailable, and no exact chart digitiz
 or OCR/VLM enrichment is enabled. Tutor answer generation and conversation state are M3;
 authentication and HTTP delivery remain M4. The initial workflow is documented in
 [`docs/M3_CONVERSATIONS.md`](docs/M3_CONVERSATIONS.md).
+
+## M3 — conversation workflow
+
+M3 adds owner-scoped SQLite thread persistence, compact checkpoints, deterministic
+supervisor routing, a grounded offline answer composer, tutor visual follow-ups, planner
+preference continuity, source-version provenance, and redacted trace IDs. Turn writes are
+atomic and stale concurrent checkpoints fail closed. The canonical Bohr and 12-to-8-unit
+planning conversations run end to end at the service boundary.
+
+Current M3 verification: Ruff clean, mypy clean (**57 source files**), and **193 tests
+pass**. Authentication and HTTP delivery remain M4.
 
 ## Open decisions
 

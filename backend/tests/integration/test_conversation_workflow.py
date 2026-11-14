@@ -55,6 +55,16 @@ def test_planner_cap_is_recomputed_and_persisted(dataset: AcademicDataset, tmp_p
     )
     assert first.planning.total_units == 12
     assert first.planning.catalogue_max_units == 16
+    assert {item.source_type for item in first.planning.evidence} == {
+        "catalogue",
+        "student_record",
+    }
+    assert all(item.source_version for item in first.planning.evidence)
+    assert len(first.trace_ids) == 2
+    assert {
+        run.trace.agent_name
+        for run in service.repository.agent_runs(thread.thread_id, "user-001")
+    } == {"supervisor", "planner"}
 
     second = service.handle_message(
         thread.thread_id,
@@ -138,7 +148,7 @@ def test_bohr_tutor_follow_up_uses_reviewed_visual(
         thread.thread_id,
         "user-001",
         scope,
-        "I mean Figure 2 on PDF page 4. How many electrons can the second "
+        "I mean Figure 2. How many electrons can the second "
         "energy level hold according to its label?",
     )
     assert exact.status == "ok"

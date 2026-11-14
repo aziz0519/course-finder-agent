@@ -34,6 +34,12 @@ class PlanningCourse(DomainModel):
     explanations: tuple[str, ...]
 
 
+class AcademicEvidence(DomainModel):
+    source_type: Literal["catalogue", "student_record"]
+    source_version: str = Field(min_length=1)
+    description: str = Field(min_length=1)
+
+
 class PlanningPayload(DomainModel):
     target_term: str
     catalogue_max_units: int = Field(gt=0)
@@ -43,6 +49,7 @@ class PlanningPayload(DomainModel):
     recommended: tuple[PlanningCourse, ...]
     deferred: tuple[PlanningCourse, ...]
     alternatives: tuple[PlanningCourse, ...]
+    evidence: tuple[AcademicEvidence, ...]
 
 
 class AgentResponse(DomainModel):
@@ -63,3 +70,12 @@ class ConversationState(DomainModel):
     active_document_id: str | None = None
     candidate_asset_ids: tuple[str, ...] = ()
     last_asset_id: str | None = None
+
+
+class TraceEvent(DomainModel):
+    """Redacted orchestration metadata; never prompts, passages, or chain-of-thought."""
+
+    trace_id: str = Field(min_length=1)
+    agent_name: Literal["supervisor", "tutor", "planner"]
+    status: ResponseStatus
+    metadata: dict[str, str] = Field(default_factory=dict)

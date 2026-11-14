@@ -1,6 +1,6 @@
 import pytest
 
-from app.agents.models import AgentResponse, ConversationState
+from app.agents.models import AgentResponse, ConversationState, TraceEvent
 from app.repositories.conversations import ConversationRepository
 
 
@@ -19,3 +19,67 @@ def test_thread_owner_scope_and_atomic_turn(tmp_path) -> None:
     assert repository.get(thread.thread_id, "user-001").state == state
     with pytest.raises(PermissionError):
         repository.get(thread.thread_id, "another-user")
+
+
+def test_trace_metadata_is_redacted_and_owner_scoped(tmp_path) -> None:
+    repository = ConversationRepository(tmp_path / "conversations.sqlite3")
+    thread = repository.create("user-001", "student-001")
+    trace = TraceEvent(
+        trace_id="trace-1",
+        agent_name="planner",
+        status="ok",
+        metadata={"intent": "planner"},
+    )
+    response = AgentResponse(
+        status="ok", intent="planner", text="A response", trace_ids=(trace.trace_id,)
+    )
+    repository.append_turn(
+        thread,
+        "Plan my courses",
+        response,
+        ConversationState(last_intent="planner"),
+        traces=(trace,),
+    )
+    assert repository.agent_runs(thread.thread_id, "user-001")[0].trace == trace
+    with pytest.raises(PermissionError):
+        repository.agent_runs(thread.thread_id, "another-user")
+
+
+def test_stale_checkpoint_is_rejected(tmp_path) -> None:
+    repository = ConversationRepository(tmp_path / "conversations.sqlite3")
+    stale = repository.create("user-001", "student-001")
+    repository.append_turn(
+        stale,
+        "First",
+        AgentResponse(status="ok", intent="planner", text="First"),
+        ConversationState(last_intent="planner"),
+    )
+    with pytest.raises(RuntimeError, match="stale"):
+        repository.append_turn(
+            stale,
+            "Conflicting",
+            AgentResponse(status="ok", intent="tutor", text="Conflicting"),
+            ConversationState(last_intent="tutor"),
+        )
+    assert len(repository.messages(stale.thread_id, "user-001")) == 2
+
+
+def test_failed_turn_rolls_back_messages_and_checkpoint(tmp_path) -> None:
+    repository = ConversationRepository(tmp_path / "conversations.sqlite3")
+    thread = repository.create("user-001", "student-001")
+    with repository.connect() as db:
+        db.execute(
+            "CREATE TRIGGER fail_assistant BEFORE INSERT ON conversation_messages "
+            "WHEN NEW.role='assistant' BEGIN SELECT RAISE(ABORT,'simulated failure'); END"
+        )
+    with pytest.raises(Exception, match="simulated failure"):
+        repository.append_turn(
+            thread,
+            "Question",
+            AgentResponse(status="ok", intent="tutor", text="Answer"),
+            ConversationState(last_intent="tutor"),
+        )
+    assert repository.messages(thread.thread_id, "user-001") == ()
+    stored = repository.get(thread.thread_id, "user-001")
+    assert stored.state == ConversationState()
+    assert stored.revision == 0

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import re
 
+from app.agents.answer_composer import AnswerComposer, OfflineAnswerComposer
 from app.agents.models import AgentResponse, Citation, ConversationState
 from app.domain.catalog import AcademicCatalog
 from app.domain.models import Student
@@ -60,9 +61,13 @@ def _resolve_course(
         course_id = re.sub(r"\s+", " ", explicit.group().upper())
         if catalog.maybe_course(course_id) and course_id in authorized_course_ids:
             return course_id, None
-        return None, "That course is not in the authorized current-course context."
-    if state.active_course_id and (
+        return None, "That course is not in the authorized course context."
+    if (
+        state.active_course_id
+        and state.active_course_id in authorized_course_ids
+        and (
         re.search(r"\b(that|this|it|the reading|figure|diagram|page)\b", message, re.I)
+        )
     ):
         return state.active_course_id, None
     lowered = message.lower()
@@ -116,6 +121,7 @@ def tutor(
     catalog: AcademicCatalog,
     scope: ReadingScope,
     retriever: Retriever,
+    composer: AnswerComposer | None = None,
 ) -> tuple[AgentResponse, ConversationState]:
     if OPERATIONAL_NUCLEAR.search(message):
         return (
@@ -164,6 +170,7 @@ def tutor(
             document_id,
             page_number=int(page_match.group(1)) if page_match else None,
             visual_type=visual_type,
+            label=f"Figure {figure_match.group(1)}" if figure_match else None,
             exact=bool(EXACT.search(message)),
         )
         next_state = state.model_copy(
@@ -264,17 +271,38 @@ def tutor(
             ),
             next_state,
         )
-    evidence = search_result.evidence[:3]
+    evidence = search_result.evidence[:5]
+    try:
+        composed = (composer or OfflineAnswerComposer()).compose(message, evidence)
+    except ValueError:
+        return (
+            AgentResponse(
+                status="insufficient_evidence",
+                intent="tutor",
+                text="The approved evidence could not be composed into a grounded answer.",
+            ),
+            next_state,
+        )
+    if any(claim.evidence_index >= len(evidence) for claim in composed.claims):
+        return (
+            AgentResponse(
+                status="insufficient_evidence",
+                intent="tutor",
+                text="The answer composer returned an invalid evidence reference.",
+            ),
+            next_state,
+        )
+    cited_evidence = tuple(evidence[claim.evidence_index] for claim in composed.claims)
     claims = " ".join(
-        f"{item.excerpt.strip()} [{item.document_title}, PDF page {item.page_number}]."
-        for item in evidence
+        f"{claim.text} [{source.document_title}, PDF page {source.page_number}]."
+        for claim, source in zip(composed.claims, cited_evidence, strict=True)
     )
     return (
         AgentResponse(
             status="ok",
             intent="tutor",
             text=claims,
-            citations=tuple(_citation(item) for item in evidence),
+            citations=tuple(_citation(item) for item in cited_evidence),
         ),
         next_state,
     )
