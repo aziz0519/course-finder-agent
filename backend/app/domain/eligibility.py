@@ -93,17 +93,30 @@ class Eligibility:
         return (self.priority, -self.unlock_score, self.course.course_code)
 
 
-def _unlock_score(catalog: AcademicCatalog, course_id: str) -> int:
-    """How many requirement-bearing courses list ``course_id`` as a prerequisite."""
+def _program_groups(catalog: AcademicCatalog, program_id: str) -> tuple[RequirementGroup, ...]:
+    """Requirement groups of one programme.
+
+    Another programme's rules must never affect this student's eligibility, priority,
+    or requirement attribution, even when both programmes list the same course.
+    """
+    return catalog.program(program_id).requirement_groups
+
+
+def _unlock_score(catalog: AcademicCatalog, program_id: str, course_id: str) -> int:
+    """How many of the student's programme courses list ``course_id`` as a prerequisite."""
+    groups = _program_groups(catalog, program_id)
     return sum(
         1
         for other in catalog.courses
-        if course_id in other.prerequisite_course_ids and catalog.groups_for_course(other.course_id)
+        if course_id in other.prerequisite_course_ids
+        and any(other.course_id in group for group in groups)
     )
 
 
-def _requirement_context(catalog: AcademicCatalog, course_id: str) -> tuple[tuple[str, ...], bool]:
-    groups: tuple[RequirementGroup, ...] = catalog.groups_for_course(course_id)
+def _requirement_context(
+    catalog: AcademicCatalog, program_id: str, course_id: str
+) -> tuple[tuple[str, ...], bool]:
+    groups = tuple(group for group in _program_groups(catalog, program_id) if course_id in group)
     group_ids = tuple(group.group_id for group in groups)
     mandatory = any(group.rule_type is RuleType.ALL for group in groups)
     return group_ids, mandatory
@@ -211,8 +224,8 @@ def evaluate_course(
                 f"{active_policy.next_term.label} prerequisites."
             )
 
-    group_ids, mandatory = _requirement_context(catalog, course.course_id)
-    unlock_score = _unlock_score(catalog, course.course_id)
+    group_ids, mandatory = _requirement_context(catalog, student.program_id, course.course_id)
+    unlock_score = _unlock_score(catalog, student.program_id, course.course_id)
 
     eligible = not reasons
     if eligible:

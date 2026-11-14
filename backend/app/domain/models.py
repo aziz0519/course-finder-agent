@@ -56,6 +56,18 @@ class RequirementGroup(DomainModel):
 
     @model_validator(mode="after")
     def _count_matches_rule(self) -> RequirementGroup:
+        duplicates = sorted(
+            {
+                course_id
+                for course_id in self.required_course_ids
+                if self.required_course_ids.count(course_id) > 1
+            }
+        )
+        if duplicates:
+            raise ValueError(
+                f"requirement group {self.group_id!r} lists duplicate course(s): "
+                f"{', '.join(duplicates)}"
+            )
         if self.rule_type is RuleType.CHOOSE:
             if self.count is None:
                 raise ValueError(f"choose-rule group {self.group_id!r} must declare count")

@@ -49,8 +49,11 @@ make validate                 # 39 checks against the supplied fixtures
 make check                    # lint + typecheck + tests
 ```
 
-`make validate` exits `0` when the data is valid, `1` on validation errors, and
-`make validate-strict` additionally exits `2` if any expected input is missing.
+The Makefile targets return `0` on success and `2` on failure — make's own recipe-failure
+code, whether the cause is validation errors (`make validate`) or a missing expected input
+(`make validate-strict`). The distinct `0`/`1`/`2` codes apply only when invoking
+`scripts/validate_datasets.py` directly: `0` valid (pending inputs tolerated), `1`
+validation errors, `2` pending inputs with `--require-complete`.
 
 ## Dataset inventory
 

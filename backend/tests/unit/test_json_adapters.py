@@ -149,6 +149,41 @@ def test_unrecognised_in_progress_rule_is_refused(tmp_path: Path) -> None:
         adapt_catalogue_from(source, tmp_path)
 
 
+@pytest.mark.parametrize(
+    "statement",
+    [
+        pytest.param(
+            "A course in progress does not count toward the prerequisites of courses in the "
+            "following term.",
+            id="negated-does-not-count",
+        ),
+        pytest.param(
+            "A course in progress is not counted toward the prerequisites of courses in the "
+            "following term.",
+            id="negated-not-counted",
+        ),
+        pytest.param(
+            "A course in progress may count toward the prerequisites of courses in the "
+            "following term only if the department approves.",
+            id="conditional-may-if-approved",
+        ),
+        pytest.param(
+            "A course in progress counts toward the prerequisites of courses in the following "
+            "term when the adviser approves.",
+            id="conditional-when-approved",
+        ),
+    ],
+)
+def test_negated_or_conditional_in_progress_rule_is_refused(tmp_path: Path, statement: str) -> None:
+    # Each statement contains the same keywords as the supported rule, so keyword
+    # presence alone must not grant in-progress prerequisite credit.
+    source = catalogue_source()
+    source["policies"]["in_progress_prerequisites"] = statement
+
+    with pytest.raises(PolicyError, match="refusing to guess"):
+        adapt_catalogue_from(source, tmp_path)
+
+
 def test_unknown_policy_key_is_refused(tmp_path: Path) -> None:
     source = catalogue_source()
     source["policies"]["late_withdrawal"] = "allowed until week 8"
@@ -205,6 +240,29 @@ def test_choose_count_beyond_options_is_rejected(tmp_path: Path) -> None:
     }
 
     with pytest.raises(DatasetError, match="needs 3 of 2"):
+        adapt_catalogue_from(source, tmp_path)
+
+
+def test_duplicate_members_in_a_choose_group_are_rejected(tmp_path: Path) -> None:
+    source = catalogue_source()
+    source["programs"][0]["requirement_groups"][0] = {
+        "requirement_id": "choose",
+        "name": "Choose",
+        "rule": "choose",
+        "count": 2,
+        "courses": ["TEST 100", "TEST 100"],
+    }
+
+    # Without the duplicate check, the repeated member would satisfy count=2.
+    with pytest.raises(DatasetError, match="duplicate course"):
+        adapt_catalogue_from(source, tmp_path)
+
+
+def test_duplicate_members_in_an_all_group_are_rejected(tmp_path: Path) -> None:
+    source = catalogue_source()
+    source["programs"][0]["requirement_groups"][0]["courses"] = ["TEST 100", "TEST 100"]
+
+    with pytest.raises(DatasetError, match="duplicate course"):
         adapt_catalogue_from(source, tmp_path)
 
 

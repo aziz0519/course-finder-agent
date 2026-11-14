@@ -89,15 +89,27 @@ def _is_within(path: Path, root: Path) -> bool:
 
 # --- Policy --------------------------------------------------------------------------
 
+# Only these explicit affirmative sentences authorise in-progress prerequisite credit.
+# Keyword presence is deliberately not enough: a negated or conditional sentence can
+# contain "in progress", "prerequisite", and "following term" while authorising nothing.
+_SUPPORTED_IN_PROGRESS_STATEMENTS = frozenset(
+    {
+        "a course in progress counts toward the prerequisites of courses in the following term",
+        "a course in progress counts towards the prerequisites of courses in the following term",
+        "a course in progress counts toward the prerequisites of courses in the next term",
+        "a course in progress counts towards the prerequisites of courses in the next term",
+    }
+)
+
 
 def _interpret_in_progress_rule(statement: str) -> InProgressPrerequisitePolicy:
-    """Turn the catalogue's sentence into a typed rule, or refuse to guess."""
-    text = " ".join(statement.lower().split())
-    mentions_in_progress = "in progress" in text or "in-progress" in text
-    mentions_prerequisites = "prerequisite" in text
-    mentions_following_term = "following term" in text or "next term" in text
+    """Turn a supported catalogue sentence into a typed rule, or refuse to guess.
 
-    if mentions_in_progress and mentions_prerequisites and mentions_following_term:
+    Any negated, conditional, or otherwise unsupported statement raises ``PolicyError``
+    rather than being treated as an affirmative rule.
+    """
+    normalised = " ".join(statement.lower().split()).rstrip(".")
+    if normalised in _SUPPORTED_IN_PROGRESS_STATEMENTS:
         return InProgressPrerequisitePolicy(allowed=True, source_statement=statement)
 
     raise PolicyError(

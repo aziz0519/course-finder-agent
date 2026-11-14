@@ -59,8 +59,8 @@ A sensible core-oriented Spring 2027 proposal for `student-001` is PHYS 110 + MA
 
 ## Remaining validation work
 
-- Supply the remaining four PDFs under `data/samples/course-materials/` and confirm all five catalogue material paths resolve.
-- Run the full Docling ingestion, page-count, extraction-quality and citation-provenance checks on the supplied PHYS 230 file and then the other four readings.
+- Run the full Docling ingestion, page-count, extraction-quality and citation-provenance checks across all five supplied readings, starting with the PHYS 230 reference fixture. No full ingestion has been run yet.
+- Complete the visual preflight and QA for the four readings beyond PHYS 230 (PHYS 350, ENGL 120, HIST 210, HIST 250); only PHYS 230 has a completed visual preflight.
 - Confirm formula recognition, visual crops, table structure, and content-safety labels using the real parser/model configuration.
 - Confirm the adviser IDs against an adviser directory or identity mapping if one is later supplied. The current source provides only opaque adviser ID strings.
 - Implement the Pydantic ingestion validators and automated regression tests in the backend; this report records the current fixture-level checks, not a production deployment test.
@@ -72,7 +72,7 @@ The supplied sample conversations are recorded in `data/samples/test-conversatio
 
 | Scenario | Current status | Key assertions |
 |---|---|---|
-| PHYS 350 Bohr model question + diagram follow-up | BLOCKED pending PDF | Resolve the Fall 2026 PHYS 350 enrolment, retrieve the linked Bohr model reading, preserve document/page/figure context across turns, and cite the diagram. Do not hard-code the expected value of 8 until the diagram in the supplied PDF has been inspected and confirms it. |
+| PHYS 350 Bohr model question + diagram follow-up | PDF present; ingestion, diagram verification and retrieval pending | Resolve the Fall 2026 PHYS 350 enrolment, ingest and index the Bohr model reading, preserve document/page/figure context across turns, and cite the diagram. Complete the diagram verification and retrieval checks before asserting the expected value of 8; do not hard-code it until the supplied diagram has been inspected and confirms it. |
 | Spring 2027 12-unit plan + 8-unit follow-up | READY for deterministic tests | Start with PHYS 110 + MATH 150 + PHYS 340 (12 units); on follow-up recompute to PHYS 110 + MATH 150 (8 units) as the core-progression default. Keep the request-specific cap in thread state and leave the catalogue's 16-unit policy unchanged. |
 
 The 8-unit default prioritizes the two outstanding Physics core foundations and their downstream prerequisite paths. PHYS 340 remains prerequisite-eligible and can be chosen instead when the student explicitly prefers to prioritize Physics electives.

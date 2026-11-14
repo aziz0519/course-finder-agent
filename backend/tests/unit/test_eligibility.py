@@ -12,7 +12,16 @@ from app.domain.eligibility import (
     evaluate_course,
 )
 from app.domain.errors import UnknownCourseError
-from app.domain.models import CourseStatus
+from app.domain.models import (
+    AcademicPolicy,
+    Course,
+    CourseStatus,
+    InProgressPrerequisitePolicy,
+    Program,
+    RequirementGroup,
+    RuleType,
+    Student,
+)
 from app.domain.terms import Term
 from app.ingestion.dataset import AcademicDataset
 
@@ -211,3 +220,95 @@ def test_unknown_course_fails_closed(dataset: AcademicDataset) -> None:
 
     with pytest.raises(UnknownCourseError):
         dataset.catalog.groups_for_course("PHYS 999")
+
+
+# --- Programme scoping ---------------------------------------------------------------
+
+
+def _course(code: str, *, prerequisites: tuple[str, ...] = ()) -> Course:
+    return Course(
+        course_id=code,
+        course_code=code,
+        title=code,
+        units=4,
+        prerequisite_course_ids=prerequisites,
+        terms_offered=frozenset({"Spring"}),
+    )
+
+
+def _two_programme_catalog() -> AcademicCatalog:
+    """Programmes that share PHYS 110 but treat it differently."""
+    policy = AcademicPolicy(
+        current_term="Fall 2026",
+        next_term="Spring 2027",
+        max_units_per_term=16,
+        in_progress_prerequisites=InProgressPrerequisitePolicy(allowed=True),
+    )
+    courses = (
+        _course("PHYS 110"),
+        _course("PHYS 120", prerequisites=("PHYS 110",)),
+        _course("PHYS 220"),
+    )
+    programs = (
+        Program(
+            program_id="program-a",
+            name="Programme A",
+            requirement_groups=(
+                RequirementGroup(
+                    group_id="a-elective",
+                    label="A elective",
+                    rule_type=RuleType.CHOOSE,
+                    required_course_ids=("PHYS 110", "PHYS 220"),
+                    count=1,
+                ),
+            ),
+        ),
+        Program(
+            program_id="program-b",
+            name="Programme B",
+            requirement_groups=(
+                RequirementGroup(
+                    group_id="b-core",
+                    label="B core",
+                    rule_type=RuleType.ALL,
+                    required_course_ids=("PHYS 110", "PHYS 120"),
+                ),
+            ),
+        ),
+    )
+    return AcademicCatalog(policy=policy, courses=courses, programs=programs)
+
+
+def _student_in(program_id: str) -> Student:
+    return Student(
+        student_id=f"student-{program_id}",
+        academic_level="Freshman",
+        program_id=program_id,
+        adviser_id="adviser-001",
+    )
+
+
+def test_requirement_groups_come_only_from_the_students_programme() -> None:
+    catalog = _two_programme_catalog()
+
+    # b-core requires PHYS 110 for programme B; for programme A it is only an option.
+    result = evaluate_course(catalog.course("PHYS 110"), _student_in("program-a"), catalog, SPRING)
+
+    assert result.requirement_groups == ("a-elective",)
+    assert result.mandatory is False
+    assert result.priority == 1
+
+
+def test_unlock_score_ignores_other_programmes_requirements() -> None:
+    catalog = _two_programme_catalog()
+
+    # PHYS 120 requires PHYS 110 but belongs only to programme B's b-core group.
+    program_a = evaluate_course(
+        catalog.course("PHYS 110"), _student_in("program-a"), catalog, SPRING
+    )
+    program_b = evaluate_course(
+        catalog.course("PHYS 110"), _student_in("program-b"), catalog, SPRING
+    )
+
+    assert program_a.unlock_score == 0
+    assert program_b.unlock_score == 1

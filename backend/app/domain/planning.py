@@ -57,7 +57,14 @@ def _needed_courses(
     catalog: AcademicCatalog,
     eligible_by_id: dict[str, Eligibility],
 ) -> list[Eligibility]:
-    """Eligible courses that advance an unmet requirement, in importance order."""
+    """Eligible courses that advance an unmet requirement, in importance order.
+
+    Only courses already eligible for the target term are considered. A required course
+    whose prerequisites are unmet is therefore skipped, not unblocked by injecting its
+    prerequisites; those prerequisites are proposed only when they advance an unmet
+    requirement of their own. Pulling them in transitively would need an explicit
+    ranking and unit-cap policy, which the catalogue and product scope do not define.
+    """
     program = catalog.program(student.program_id)
     needed: list[Eligibility] = []
     seen: set[str] = set()
