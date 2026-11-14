@@ -1,7 +1,7 @@
 .DEFAULT_GOAL := help
 PY := uv run python
 
-.PHONY: help sync validate validate-strict test lint fmt typecheck check clean
+.PHONY: help sync validate validate-strict ingest test lint fmt typecheck check clean
 
 help:  ## Show available targets
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-16s\033[0m %s\n", $$1, $$2}'
@@ -14,6 +14,9 @@ validate:  ## Validate the supplied datasets (pending inputs are tolerated)
 
 validate-strict:  ## Validate the datasets and fail when any input is still missing
 	$(PY) scripts/validate_datasets.py --require-complete
+
+ingest:  ## Ingest all five PDFs with checksum-bound QA and local retrieval activation
+	$(PY) scripts/ingest_datasets.py
 
 test:  ## Run the test suite
 	uv run pytest

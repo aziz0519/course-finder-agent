@@ -1,0 +1,58 @@
+{
+  "documents": {
+    "phys230-critical-mass": {
+      "source_checksum": "9cc30f28212b81a3886bb418511630c932ddab8a7150015d95b2ee86941f6539",
+      "reviewer": "M2 coding-agent visual preflight, 2026-11-14",
+      "notes": "All 11 pages inspected in contact sheets. Entire reading quarantined; no student-facing safe excerpt set approved. Tables, chart and equations retained for admin QA, not verified for exact claims.",
+      "text_pages": [1,2,3,4,5,6,7,8,9,10,11],
+      "regions": [
+        {"page":7,"bbox":[50,55,560,735],"visual_type":"equation","label":"Displayed equations (unparsed)"},
+        {"page":9,"bbox":[182.39627075195312,89.76220703125,429.6037292480469,344.88031005859375],"visual_type":"chart","label":"Figure 3"}
+      ]
+    },
+    "phys350-bohr-model": {
+      "source_checksum": "622528681a286090f9a509815a31ca02cbcc1fe92b1dd731f697e329b8d2adcf",
+      "reviewer": "M2 coding-agent visual preflight, 2026-11-14",
+      "notes": "All 12 pages inspected in contact sheets; figures 1 and 2 inspected at readable page resolution. Figure 2 on PDF page 4 explicitly labels second and third energy levels as each holding up to 8 electrons. Mathematical pages have conservative full-page equation crops; no LaTeX or exact equation claims approved.",
+      "text_pages": [1,2,3,4,5,6,7,8,9,10,11,12],
+      "regions": [
+        {"page":1,"bbox":[155.56179809570312,144.36221313476562,456.4382019042969,399.4803161621094],"visual_type":"figure","label":"Figure 1","caption":"The Bohr model of the hydrogen atom.","status":"approved"},
+        {"page":4,"bbox":[178.44094848632812,445.51220703125,433.5590515136719,700.6303100585938],"visual_type":"figure","label":"Figure 2","caption":"Models depicting electron energy levels in hydrogen, helium, lithium, and neon.","source_transcription":"The second and third energy levels can each contain up to 8 electrons.","status":"approved","exact_values_verified":true},
+        {"page":3,"bbox":[50,55,560,735],"visual_type":"equation","label":"Displayed equations (unparsed)"},
+        {"page":5,"bbox":[50,55,560,735],"visual_type":"equation","label":"Displayed equations (unparsed)"},
+        {"page":6,"bbox":[50,55,560,735],"visual_type":"equation","label":"Displayed equations (unparsed)"},
+        {"page":7,"bbox":[50,55,560,735],"visual_type":"equation","label":"Displayed equations (unparsed)"},
+        {"page":8,"bbox":[50,55,560,735],"visual_type":"equation","label":"Displayed equations (unparsed)"},
+        {"page":9,"bbox":[50,55,560,735],"visual_type":"equation","label":"Displayed equations (unparsed)"},
+        {"page":10,"bbox":[50,55,560,735],"visual_type":"equation","label":"Displayed equations (unparsed)"}
+      ]
+    },
+    "engl120-the-raven": {
+      "source_checksum": "d84bf67be1b4d236d25209fb9ab5ec9b27e4dfe3f916a9b248a461c716035b06",
+      "reviewer": "M2 coding-agent visual preflight, 2026-11-14",
+      "notes": "All 15 pages inspected in contact sheets. PDF pages 1 and 9 inspected at readable resolution. Page 1 two-column metadata table checked against render: Item/Detail header, six body rows, Lines=108. Page 9 stress/syllable transcription remains unverified.",
+      "text_pages": [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15],
+      "regions": [
+        {"page":1,"bbox":[208.923095703125,144.36221313476562,403.076904296875,399.4803161621094],"visual_type":"figure","label":"Figure 1","caption":"Illustration by Édouard Manet (1875), digitally restored.","status":"approved"},
+        {"page":1,"bbox":[197.47790550000002,441.93280500000003,414.52209459375,561.7324635],"visual_type":"table","label":"Publication metadata","caption":"Item and Detail","status":"approved","exact_values_verified":true},
+        {"page":9,"bbox":[64.8641355,187.87499775000003,547.1358645,222.02499749999993],"visual_type":"table","label":"Syllabic structure of a verse"}
+      ]
+    },
+    "hist210-niels-bohr": {
+      "source_checksum": "3d96a5a637fbe4be57e59e309330aa54c61a6fe7d79451702d260065b1ed6236",
+      "reviewer": "M2 coding-agent visual preflight, 2026-11-14",
+      "notes": "All 17 pages inspected in contact sheets. No visual assets approved for exact claims. Page 6 displayed formulas retained with equation_unparsed; weapons-context pages conservatively restricted.",
+      "text_pages": [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17],
+      "regions": [
+        {"page":6,"bbox":[50,510,560,735],"visual_type":"equation","label":"Displayed equations (unparsed)"}
+      ]
+    },
+    "hist250-demon-core": {
+      "source_checksum": "e56e78ce782fd223ee6f607ea114563ef1efb25455a6d64c875bd1f390e5c05a",
+      "reviewer": "M2 coding-agent visual preflight, 2026-11-14",
+      "notes": "All 9 pages inspected in contact sheets. Entire reading quarantined; visual and table extraction not approved for student-facing claims.",
+      "text_pages": [1,2,3,4,5,6,7,8,9],
+      "regions": []
+    }
+  }
+}

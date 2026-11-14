@@ -102,14 +102,22 @@ def _program_groups(catalog: AcademicCatalog, program_id: str) -> tuple[Requirem
     return catalog.program(program_id).requirement_groups
 
 
-def _unlock_score(catalog: AcademicCatalog, program_id: str, course_id: str) -> int:
-    """How many of the student's programme courses list ``course_id`` as a prerequisite."""
+def _unlock_score(
+    catalog: AcademicCatalog, program_id: str, course_id: str, student: Student
+) -> int:
+    """How many still-unmet programme courses list ``course_id`` as a prerequisite.
+
+    A downstream course the student already completed or is taking no longer needs
+    unlocking, so counting it would overstate this course's ranking value.
+    """
     groups = _program_groups(catalog, program_id)
     return sum(
         1
         for other in catalog.courses
         if course_id in other.prerequisite_course_ids
         and any(other.course_id in group for group in groups)
+        and not student.is_completed(other.course_id)
+        and not student.is_current(other.course_id)
     )
 
 
@@ -225,7 +233,7 @@ def evaluate_course(
             )
 
     group_ids, mandatory = _requirement_context(catalog, student.program_id, course.course_id)
-    unlock_score = _unlock_score(catalog, student.program_id, course.course_id)
+    unlock_score = _unlock_score(catalog, student.program_id, course.course_id, student)
 
     eligible = not reasons
     if eligible:

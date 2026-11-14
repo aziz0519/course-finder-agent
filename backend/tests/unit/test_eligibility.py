@@ -15,6 +15,7 @@ from app.domain.errors import UnknownCourseError
 from app.domain.models import (
     AcademicPolicy,
     Course,
+    CourseRecord,
     CourseStatus,
     InProgressPrerequisitePolicy,
     Program,
@@ -239,8 +240,8 @@ def _course(code: str, *, prerequisites: tuple[str, ...] = ()) -> Course:
 def _two_programme_catalog() -> AcademicCatalog:
     """Programmes that share PHYS 110 but treat it differently."""
     policy = AcademicPolicy(
-        current_term="Fall 2026",
-        next_term="Spring 2027",
+        current_term=Term.parse("Fall 2026"),
+        next_term=Term.parse("Spring 2027"),
         max_units_per_term=16,
         in_progress_prerequisites=InProgressPrerequisitePolicy(allowed=True),
     )
@@ -312,3 +313,26 @@ def test_unlock_score_ignores_other_programmes_requirements() -> None:
 
     assert program_a.unlock_score == 0
     assert program_b.unlock_score == 1
+
+
+def test_unlock_score_does_not_count_dependants_already_taken() -> None:
+    catalog = _two_programme_catalog()
+    student = Student(
+        student_id="student-program-b",
+        academic_level="Sophomore",
+        program_id="program-b",
+        adviser_id="adviser-001",
+        completed_courses=(
+            CourseRecord(
+                course_id="PHYS 120",
+                term=Term.parse("Fall 2025"),
+                status=CourseStatus.COMPLETED,
+            ),
+        ),
+    )
+
+    # PHYS 110 used to unlock PHYS 120, but that dependant is already completed.
+    result = evaluate_course(catalog.course("PHYS 110"), student, catalog, SPRING)
+
+    assert result.unlock_score == 0
+

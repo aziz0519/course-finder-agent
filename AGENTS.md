@@ -3,7 +3,7 @@
 > **Status:** MVP engineering instructions; updated after the first representative PDF preflight on 2026-11-13  
 > **Scenario clock:** Fall 2026 is the current term; Spring 2027 is the next term.  
 > **Example account:** `student-001`  
-> **Data boundary:** The course catalogue and degree requirements are supplied in `data/samples/course-catalog.json`; the two-student synthetic records are supplied in `data/samples/student-records.json`. These are the authoritative MVP fixtures. One of the five catalogue-referenced PDFs is now present at `data/samples/course-materials/phys230-critical-mass.pdf`; the other four PDF bytes remain outstanding. Validate all five catalogue paths before declaring the reading corpus complete. Do not create substitute student facts or academic facts.
+> **Data boundary:** The course catalogue and degree requirements are supplied in `data/samples/course-catalog.json`; the two-student synthetic records are supplied in `data/samples/student-records.json`. These are the authoritative MVP fixtures. All five catalogue-referenced PDFs are now present under `data/samples/course-materials/`; verify their checksums and page counts against `data/manifests/course_readings_manifest.json` before declaring the reading corpus complete. Ingestion is still pending. Do not create substitute student facts or academic facts.
 
 ## 1. Product goal
 
@@ -35,7 +35,7 @@ The application must be transparent about uncertainty. If the supplied datasets 
 - The catalogue declares `current_term` as `Fall 2026`, `next_term` as `Spring 2027`, and `policies.max_units_per_term` as 16. These are scenario data, not values to calculate from the server clock.
 - All 14 catalogue courses carry 4 units; therefore a term plan cannot exceed four of these courses (16 units). The UI may show all eligible candidates, but any proposed combination must be checked against the 16-unit cap.
 - The catalogue policy means a course enrolled in Fall 2026 may satisfy a prerequisite for a course planned in Spring 2027. This exception applies to next-term prerequisite eligibility only; an in-progress course remains in progress and must not be counted as completed for degree-progress reporting.
-- The catalogue lists five reading mappings: PHYS 230 / Critical mass (`course-materials/phys230-critical-mass.pdf`), PHYS 350 / Bohr model (`course-materials/phys350-bohr-model.pdf`), ENGL 120 / The Raven (`course-materials/engl120-the-raven.pdf`), HIST 210 / Niels Bohr (`course-materials/hist210-niels-bohr.pdf`), and HIST 250 / Demon core (`course-materials/hist250-demon-core.pdf`). `phys230-critical-mass.pdf` has been supplied and copied to `data/samples/course-materials/`; the remaining four PDFs are still missing. Confirm every file exists; the catalogue alone does not provide reading content.
+- The catalogue lists five reading mappings: PHYS 230 / Critical mass (`course-materials/phys230-critical-mass.pdf`), PHYS 350 / Bohr model (`course-materials/phys350-bohr-model.pdf`), ENGL 120 / The Raven (`course-materials/engl120-the-raven.pdf`), HIST 210 / Niels Bohr (`course-materials/hist210-niels-bohr.pdf`), and HIST 250 / Demon core (`course-materials/hist250-demon-core.pdf`). All five PDFs have been supplied and copied to `data/samples/course-materials/`. Confirm every file exists and matches the manifest; the catalogue alone does not provide reading content.
 - The student example is `student-001`; the two synthetic records are in `data/samples/student-records.json`. Preserve `completed_courses` and `enrolled_courses` as separate statuses. Do not invent grades, course outcomes, adviser identities, student credentials, or additional student attributes.
 - Treat `completed_courses` and `enrolled_courses` as different statuses. A course currently in progress does not count as completed except for the explicitly stated next-term prerequisite policy above.
 - Adviser assignments are authorization data, not merely display metadata.
@@ -239,7 +239,7 @@ Observed characteristics of this supplied file:
 - A generic embedded-image extraction pass returned repeated references to the same four image payloads across multiple pages. Do not equate raw image-object count with the number of logical figures, and do not infer page placement from an extracted image filename alone. Use layout/page-region associations, figure captions, and page renders; deduplicate binary payloads by checksum while retaining every distinct placement reference.
 - The final page contains source attribution and a Creative Commons Attribution-ShareAlike notice. Preserve attribution and license metadata in the document record and in any redistributed derivative artefacts.
 
-This preflight is an observed test result, not a claim that Docling has already been configured or that the document is fully ingested. The PDF is present, but the other four catalogue-referenced readings remain pending.
+This preflight is an observed test result, not a claim that the full ingestion pipeline has already been configured or that the document is fully ingested. All five PDFs are now present, but only PHYS 230 has a completed visual preflight; each of the other four gets its own preflight in M2.
 
 ### 5.2 Canonical domain model
 
@@ -260,10 +260,10 @@ Use stable source IDs wherever present. If a source record has no stable ID, der
 
 ### 5.3 Ingestion pipeline
 
-1. **Discover and manifest:** enumerate `data/samples/`; record file name, type, size, checksum, and dataset version. Validate 14 catalogue courses and one program from `course-catalog.json`; validate two student records from `student-records.json`. Check all five PDF references: PHYS 230 / Critical mass is present; PHYS 350 / Bohr model, ENGL 120 / The Raven, HIST 210 / Niels Bohr, and HIST 250 / Demon core remain pending until their file bytes are supplied.
+1. **Discover and manifest:** enumerate `data/samples/`; record file name, type, size, checksum, and dataset version. Validate 14 catalogue courses and one program from `course-catalog.json`; validate two student records from `student-records.json`. Check all five PDF references: PHYS 230 / Critical mass, PHYS 350 / Bohr model, ENGL 120 / The Raven, HIST 210 / Niels Bohr, and HIST 250 / Demon core are present and match the manifest checksums and page counts.
 2. **Validate JSON:** parse `course-catalog.json` and `student-records.json` with Pydantic adapters. Check uniqueness of course codes and student IDs, units > 0, allowed term values, prerequisite references, material path containment and existence, valid `all`/`choose` rules, `count` bounds, programme and degree requirement references, student programme references, completed/enrolled course references, current-term enrolment consistency, duplicate course records, and conflicts between completed and enrolled statuses. Adviser IDs are opaque assignment references until an adviser directory/authentication mapping is supplied; do not fabricate that directory.
 3. **Normalize academic data:** load catalogue, requirements, and student records in a transaction. Preserve the raw JSON and source path/version for audit and reprocessing.
-4. **Parse PDFs:** use Docling's layout-aware pipeline. Start with the standard pipeline for born-digital documents. Use OCR for scanned/image-only pages. Use the VLM/vision pipeline selectively for difficult layouts, dense tables, charts, photographs with relevant content, or equations that the standard parser does not recover reliably.
+4. **Parse PDFs:** use the active `PdfParser` (PyMuPDF + pdfplumber for the MVP; Docling for layouts the simple parser cannot recover). Start with the native text layer for born-digital documents. Use OCR for scanned/image-only pages. Use a VLM/vision pass selectively for difficult layouts, dense tables, charts, photographs with relevant content, or equations that the structural parser does not recover reliably.
 5. **Preserve visual information:** save page renders and layout-associated figure/table/equation crops; associate each with its PDF page, optional printed page label, caption, bounding box, course, and source version. Generate concise visual descriptions only when useful for search, mark them as machine-generated metadata, and retain the original crop. A description is not source text or a substitute for reading the visual.
 6. **Quality checks:** compare extracted page count with source page count; flag empty pages, missing/garbled equations, broken table structure, uncaptioned figures, chart-label uncertainty, OCR uncertainty, and extraction failures. Visually review a contact sheet and every page containing a table, chart, equation, or figure for this small five-PDF corpus. Retain a per-document and per-page quality report.
 7. **Chunk and embed:** chunk by semantic section and content type, not arbitrary character count alone. Repeat table headers in row-group chunks; keep equations with their surrounding explanation; keep figure captions, generated descriptions, and adjacent paragraphs linked to the figure asset. Store page-level provenance, extraction method, confidence, and safety label on every block/chunk. Generate embeddings through a provider abstraction.
@@ -271,12 +271,14 @@ Use stable source IDs wherever present. If a source record has no stable ID, der
 
 ### 5.3.1 Required multimodal extraction strategy
 
+> **MVP parser decision (ADR 0001):** the Python monolith implements Pass A with PyMuPDF + pdfplumber behind a `PdfParser` interface. Docling remains the target for layouts the simple parser cannot recover and can be swapped in per document without changing the quality gates or the retrieval contract. Whichever parser is active must meet every requirement below.
+
 Use a two-pass, page-aware pipeline. The corpus is small (five short readings), so correctness and traceability are more important than maximizing ingestion throughput.
 
 **Pass A — structural extraction**
 
 1. Preflight each PDF: calculate SHA-256; record file size, page count, page dimensions, rotation, encryption, metadata, outline, and whether each page has a usable text layer. Create a 1-based PDF page manifest and preserve any printed page label separately.
-2. Run a pinned Docling version with its standard layout-aware PDF pipeline first. Enable layout/reading-order extraction and table-structure reconstruction. Preserve headings, paragraphs, captions, table cells, reading order, and source page coordinates.
+2. Run the active layout-aware parser first (`PdfParser`; PyMuPDF + pdfplumber for the MVP, Docling when adopted for a difficult document). Enable layout/reading-order extraction and table-structure reconstruction. Preserve headings, paragraphs, captions, table cells, reading order, and source page coordinates.
 3. Generate page images for visual review and separate image/crop assets for detected picture, diagram, chart, and table regions. Associate each logical visual with its page, bounding box, nearby caption, and nearby explanatory text.
 4. Extract native text from born-digital pages. Run OCR only on scanned pages, image-only regions, or pages with broken/low-quality text layers. Record OCR engine, language, confidence, and whether OCR replaced native text.
 5. Extract table structure into typed rows and columns while preserving multi-row headers, merged cells, units, footnotes, and original page crops. Keep both structured table data and the source image; never discard the image after tabular conversion.
@@ -290,7 +292,7 @@ Use a two-pass, page-aware pipeline. The corpus is small (five short readings), 
 4. Run targeted OCR or formula/chart recognition for failed regions only. If confidence remains low, mark that asset `needs_review` and disable exact-claim answering from it until reviewed.
 5. Produce a per-document contact sheet and visual QA report. For this five-document MVP, visually review every page once and every page containing a table, chart, equation, or figure at readable resolution.
 
-Docling's current pipeline options expose table-structure extraction, page and picture image generation, picture classification/description, chart extraction, formula enrichment, and OCR controls. Pin the package/model versions and verify the selected options against the installed Docling release before implementation; do not copy unversioned examples blindly. Enable expensive VLM enrichments selectively rather than running them against every page by default.
+Parser options — including Docling's table/picture/chart/formula enrichment and OCR controls — must be pinned and verified against the installed release before implementation; do not copy unversioned examples blindly. Enable expensive VLM enrichments selectively rather than running them against every page by default.
 
 ### 5.3.2 Content normalization, chunking, and provenance
 
@@ -611,7 +613,7 @@ Keep domain logic independent of FastAPI, LangGraph, and model-provider SDKs. Us
 - Implement course-scoped hybrid text retrieval plus an asset-resolution path for follow-ups about a figure, chart, table, or equation.
 - Build a reading viewer/source citation component with PDF page and figure/table anchors.
 
-**Exit gate:** the reference PDF passes page coverage and visual QA; text and visual questions return the correct source page/asset; unreliable tables, equations, or chart values produce an explicit abstention. Then run the same pipeline over the remaining four PDFs when their bytes are supplied.
+**Exit gate:** the reference PDF passes page coverage and visual QA; text and visual questions return the correct source page/asset; unreliable tables, equations, or chart values produce an explicit abstention. Then run the same pipeline over the other four supplied PDFs.
 
 ### Phase 3 — Tutor workflow and follow-up chat
 
@@ -667,7 +669,7 @@ Use `data/samples/course-materials/phys230-critical-mass.pdf` as the first multi
 
 ### Required supplied conversation regressions
 
-The canonical sample suite is `data/samples/test-conversations.json`. Execute it with an authenticated student session scoped to `student-001`.
+The canonical sample suite is `data/samples/test-conversations.json`. It was reconstructed from this section on 2026-11-14 because the originally referenced file was not present in the repository; its `provenance` field records that. Execute it with an authenticated student session scoped to `student-001`.
 
 **Tutor conversation — PHYS 350 / Bohr model**
 
@@ -751,7 +753,7 @@ Never commit a real secret. Seed development identities with documented, disposa
 
 - Recommendations are calculated from the supplied snapshot, not a live registration or degree-audit system.
 - The app cannot guarantee course seats, timetable compatibility, instructor availability, or official adviser approval unless those data sources are added later.
-- Visual understanding depends on extraction quality. If an equation, chart, or table is unreadable or unreviewed, the app must disclose that limitation and avoid exact claims. At this update, one of five readings has been supplied; the remaining four must be added before full-corpus acceptance.
+- Visual understanding depends on extraction quality. If an equation, chart, or table is unreadable or unreviewed, the app must disclose that limitation and avoid exact claims. All five readings are present, but none has been ingested yet; M2 must complete ingestion and visual QA before full-corpus acceptance.
 - Degree progress is only as reliable as the structure and completeness of the supplied requirements JSON. Unsupported rules must be marked as indeterminate.
 - Synthetic student records and sample data are for demonstration only.
 
@@ -771,4 +773,4 @@ Use official documentation for implementation details and verify version-specifi
 
 ---
 
-**First coding task:** implement Phase 0 using the supplied `data/samples/course-catalog.json` and `data/samples/student-records.json`: validate the 14 course records, one programme, five requirement groups, terms, prerequisites, 16-unit policy, five PDF references, two students, programme references, course references, term consistency, and course-status conflicts; commit canonical Pydantic models and a validation report. Then ingest the supplied PHYS 230 reference PDF and complete its multimodal QA baseline; ingest the remaining four referenced PDFs when their file bytes are added. Add deterministic regression tests for the `student-001` and `student-002` eligibility cases in Section 5.1.2. In parallel, create the `infra/` CDK skeleton and document the target AWS account/Region assumptions; do not provision production resources until the app's data boundaries, IAM roles, and cost estimate have been reviewed.
+**First coding task:** implement Phase 0 using the supplied `data/samples/course-catalog.json` and `data/samples/student-records.json`: validate the 14 course records, one programme, five requirement groups, terms, prerequisites, 16-unit policy, five PDF references, two students, programme references, course references, term consistency, and course-status conflicts; commit canonical Pydantic models and a validation report. Then ingest the supplied PHYS 230 reference PDF and complete its multimodal QA baseline; all five referenced PDFs are now present, so the M2 pipeline runs over the full corpus. Add deterministic regression tests for the `student-001` and `student-002` eligibility cases in Section 5.1.2. In parallel, create the `infra/` CDK skeleton and document the target AWS account/Region assumptions; do not provision production resources until the app's data boundaries, IAM roles, and cost estimate have been reviewed.

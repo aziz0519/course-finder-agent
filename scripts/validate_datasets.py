@@ -43,14 +43,17 @@ Severity = Literal["ok", "warn", "error", "pending"]
 
 CATALOGUE_REL = Path("samples/course-catalog.json")
 STUDENTS_REL = Path("samples/student-records.json")
+CONVERSATIONS_REL = Path("samples/test-conversations.json")
 CATALOGUE_SCHEMA_NAME = "course_catalog.schema.json"
 STUDENTS_SCHEMA_NAME = "student_records.schema.json"
+CONVERSATIONS_SCHEMA_NAME = "test_conversations.schema.json"
 MANIFEST_REL = Path("manifests/course_readings_manifest.json")
 
 EXPECTED_COURSE_COUNT = 14
 EXPECTED_PROGRAM_COUNT = 1
 EXPECTED_REQUIREMENT_GROUP_COUNT = 5
 EXPECTED_STUDENT_COUNT = 2
+EXPECTED_CONVERSATION_COUNT = 2
 EXPECTED_PDF_COUNT = 5
 EXPECTED_MAX_UNITS_PER_TERM = 16
 EXPECTED_CURRENT_TERM = "Fall 2026"
@@ -614,6 +617,187 @@ def validate_manifest(report: Report, manifest: Any, data_root: Path) -> None:
     )
 
 
+# --- Conversation regression suite ---------------------------------------------------
+
+
+def validate_conversations(
+    report: Report, suite: Any, catalogue: Any, students: Any
+) -> None:
+    """Validate the reconstructed multi-turn regression script.
+
+    The suite is a test script, not academic evidence. Every course, document, and unit
+    total it asserts must resolve against the supplied catalogue.
+    """
+    if not isinstance(suite, dict):
+        report.add("error", "Conversation suite shape", "expected a JSON object")
+        return
+
+    conversations = suite.get("conversations") or []
+    report.add(
+        "ok" if len(conversations) == EXPECTED_CONVERSATION_COUNT else "error",
+        "Conversation suite count",
+        f"{len(conversations)} (expected {EXPECTED_CONVERSATION_COUNT})",
+    )
+
+    scenario_value = suite.get("scenario")
+    scenario: dict[str, Any] = scenario_value if isinstance(scenario_value, dict) else {}
+    report.add(
+        "ok"
+        if scenario.get("current_term") == EXPECTED_CURRENT_TERM
+        and scenario.get("next_term") == EXPECTED_NEXT_TERM
+        else "error",
+        "Conversation suite scenario terms",
+        f"{scenario.get('current_term')!r} -> {scenario.get('next_term')!r}",
+    )
+
+    if not isinstance(catalogue, dict) or not isinstance(students, dict):
+        return
+
+    courses = {
+        str(course.get("course_code")): course
+        for course in catalogue.get("courses") or []
+        if isinstance(course, dict)
+    }
+    student_ids = {
+        student.get("student_id")
+        for student in students.get("students") or []
+        if isinstance(student, dict)
+    }
+
+    student_id = suite.get("student_id")
+    report.add(
+        "ok" if student_id in student_ids else "error",
+        "Conversation suite student resolves",
+        str(student_id),
+    )
+
+    def units_of(code: str) -> int | None:
+        course = courses.get(code)
+        units = course.get("units") if isinstance(course, dict) else None
+        return units if isinstance(units, int) else None
+
+    seen_ids: set[str] = set()
+    for position, conversation in enumerate(conversations):
+        if not isinstance(conversation, dict):
+            report.add("error", "Conversation shape", f"conversations[{position}]")
+            continue
+
+        conversation_id = str(conversation.get("conversation_id"))
+        kind = conversation.get("kind")
+        turns = conversation.get("turns") or []
+
+        if conversation_id in seen_ids:
+            report.add("error", "Conversation id unique", conversation_id)
+        seen_ids.add(conversation_id)
+
+        report.add(
+            "ok" if kind in {"tutor", "planner"} else "error",
+            "Conversation kind",
+            f"{conversation_id}: {kind!r}",
+        )
+
+        numbers = [turn.get("turn") for turn in turns if isinstance(turn, dict)]
+        report.add(
+            "ok" if numbers == list(range(1, len(turns) + 1)) else "error",
+            "Conversation turn numbering",
+            f"{conversation_id}: {numbers}",
+        )
+
+        for turn in turns:
+            if not isinstance(turn, dict):
+                continue
+
+            if kind == "tutor":
+                code = str(turn.get("expected_course_code"))
+                course = courses.get(code)
+                if course is None:
+                    report.add("error", "Tutor course resolves", f"{conversation_id}: {code}")
+                    continue
+                materials = course.get("materials") or []
+                expected_title = turn.get("expected_document_title")
+                expected_file = Path(str(turn.get("expected_source_filename"))).name
+                matched = any(
+                    isinstance(material, dict)
+                    and material.get("title") == expected_title
+                    and Path(str(material.get("file", ""))).name == expected_file
+                    for material in materials
+                )
+                report.add(
+                    "ok" if matched else "error",
+                    "Tutor reading mapping resolves",
+                    f"{conversation_id}: {code} / {expected_title!r} / {expected_file}",
+                )
+
+                status = turn.get("value_verification_status")
+                value = turn.get("expected_answer_value")
+                if status == "pending_diagram_inspection":
+                    report.add(
+                        "ok" if value is None else "error",
+                        "Tutor value not asserted before verification",
+                        f"{conversation_id}: {value!r}",
+                    )
+                elif status == "verified_from_source":
+                    report.add(
+                        "ok" if isinstance(value, int) else "error",
+                        "Tutor verified value present",
+                        f"{conversation_id}: {value!r}",
+                    )
+
+            elif kind == "planner":
+                cap = turn.get("request_unit_cap")
+                catalogue_max = turn.get("expected_catalogue_max_units")
+                recommended = turn.get("expected_recommended_courses") or []
+                deferred = turn.get("expected_deferred_courses") or []
+                alternatives = turn.get("expected_alternative_courses") or []
+                excluded = turn.get("expected_excluded_courses") or []
+                reported_total = turn.get("expected_total_units")
+
+                unknown = sorted(
+                    str(code)
+                    for code in {*recommended, *deferred, *alternatives, *excluded}
+                    if code not in courses
+                )
+                report.add(
+                    "ok" if not unknown else "error",
+                    "Planner courses resolve",
+                    f"{conversation_id}: {', '.join(unknown) if unknown else 'all resolve'}",
+                )
+
+                computed_total = sum(units_of(str(code)) or 0 for code in recommended)
+                report.add(
+                    "ok" if reported_total == computed_total else "error",
+                    "Planner total units match catalogue",
+                    f"{conversation_id}: {reported_total} vs {computed_total}",
+                )
+
+                effective_cap = (
+                    min(cap, catalogue_max)
+                    if isinstance(cap, int) and isinstance(catalogue_max, int)
+                    else None
+                )
+                report.add(
+                    "ok"
+                    if isinstance(reported_total, int)
+                    and effective_cap is not None
+                    and reported_total <= effective_cap
+                    else "error",
+                    "Planner proposal respects the effective cap",
+                    f"{conversation_id}: {reported_total} <= {effective_cap}",
+                )
+                report.add(
+                    "ok" if catalogue_max == EXPECTED_MAX_UNITS_PER_TERM else "error",
+                    "Planner leaves the catalogue cap unchanged",
+                    f"{conversation_id}: {catalogue_max}",
+                )
+
+                overlap = sorted(set(recommended) & set(excluded))
+                report.add(
+                    "ok" if not overlap else "error",
+                    "Planner does not recommend excluded courses",
+                    f"{conversation_id}: {', '.join(overlap) if overlap else 'none'}",
+                )
+
+
 # --- Canonical domain model -----------------------------------------------------------
 
 
@@ -697,6 +881,7 @@ def main(argv: list[str] | None = None) -> int:
     # Inputs
     catalogue_path = data_root / CATALOGUE_REL
     students_path = data_root / STUDENTS_REL
+    conversations_path = data_root / CONVERSATIONS_REL
     manifest_path = data_root / MANIFEST_REL
 
     catalogue = (
@@ -705,6 +890,11 @@ def main(argv: list[str] | None = None) -> int:
     students = (
         load_json(report, students_path, "Student records") if students_path.is_file() else None
     )
+    conversations = (
+        load_json(report, conversations_path, "Conversation suite")
+        if conversations_path.is_file()
+        else None
+    )
     manifest = (
         load_json(report, manifest_path, "Reading manifest") if manifest_path.is_file() else None
     )
@@ -712,6 +902,7 @@ def main(argv: list[str] | None = None) -> int:
     for label, path, instance in (
         ("Course catalogue", catalogue_path, catalogue),
         ("Student records", students_path, students),
+        ("Conversation suite", conversations_path, conversations),
         ("Reading manifest", manifest_path, manifest),
     ):
         if instance is None:
@@ -745,6 +936,16 @@ def main(argv: list[str] | None = None) -> int:
 
     if manifest is not None:
         validate_manifest(report, manifest, data_root)
+
+    if conversations is not None:
+        conversations_valid = validate_schema(
+            report,
+            conversations,
+            resolve_schema_path(CONVERSATIONS_SCHEMA_NAME, data_root),
+            "Conversation suite",
+        )
+        if conversations_valid:
+            validate_conversations(report, conversations, catalogue, students)
 
     validate_canonical_adapters(report, catalogue, students, data_root)
 

@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+import json
+from copy import deepcopy
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -88,3 +91,67 @@ def test_require_complete_turns_pending_inputs_into_exit_code_two(
 
     assert validator.main(["--data-root", str(data_root), "--require-complete"]) == 2
     assert "INCOMPLETE" in capsys.readouterr().out
+
+
+def _supplied_fixtures() -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]:
+    root = validator.REPO_ROOT / "data"
+
+    def load(relative: str) -> dict[str, Any]:
+        return json.loads((root / relative).read_text(encoding="utf-8"))
+
+    return (
+        load("samples/test-conversations.json"),
+        load("samples/course-catalog.json"),
+        load("samples/student-records.json"),
+    )
+
+
+def test_conversation_validator_rejects_an_unverified_diagram_value() -> None:
+    suite, catalogue, students = _supplied_fixtures()
+    tampered = deepcopy(suite)
+    tutor = next(item for item in tampered["conversations"] if item["kind"] == "tutor")
+    tutor["turns"][1]["expected_answer_value"] = 8
+    tutor["turns"][1]["value_verification_status"] = "pending_diagram_inspection"
+
+    report = validator.Report()
+    validator.validate_conversations(report, tampered, catalogue, students)
+
+    assert any(
+        level == "error" and check == "Tutor value not asserted before verification"
+        for level, check, _ in report.findings
+    )
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [("turns", 1), ("expected_recommended_courses", [["unhashable"]])],
+)
+def test_schema_invalid_conversations_report_failure_without_semantic_validation(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+    field: str,
+    value: Any,
+) -> None:
+    suite, catalogue, students = _supplied_fixtures()
+    planner = next(c for c in suite["conversations"] if c["kind"] == "planner")
+    if field == "turns":
+        planner[field] = value
+    else:
+        planner["turns"][0][field] = value
+    samples = tmp_path / "samples"
+    samples.mkdir()
+    for filename, payload in (
+        ("course-catalog.json", catalogue),
+        ("student-records.json", students),
+        ("test-conversations.json", suite),
+    ):
+        (samples / filename).write_text(json.dumps(payload), encoding="utf-8")
+
+    def unexpected_semantic_validation(*args, **kwargs):
+        pytest.fail("schema-invalid suite reached semantic validation")
+
+    monkeypatch.setattr(validator, "validate_conversations", unexpected_semantic_validation)
+    assert validator.main(["--data-root", str(tmp_path)]) == 1
+    output = capsys.readouterr().out
+    assert "Conversation suite schema violation" in output and "Result: FAILED" in output

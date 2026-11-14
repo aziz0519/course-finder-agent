@@ -4,14 +4,20 @@
 **Validation result:** PASS for the supplied catalogue and student JSON fixtures; PARTIAL PASS for the first PDF preflight  
 **Scope note:** this report was produced when only the PHYS 230 PDF had been supplied. All five PDFs are now present; the re-verification note below records the current state.
 
-> **Re-verified (2026-11-13, after the fixtures were added):** the supplied bytes now match this report, and the corpus is complete. `scripts/validate_datasets.py` reports 39 passed, 0 warnings, 0 errors, 0 pending; all five reading checksums and page counts match the manifest; the PHYS 230 `sha256` (`9cc30f28…`) and its 11-page count match the preflight above. The validator now also builds the canonical domain model (14 courses, 1 programme, 5 readings, 2 students) so a file that satisfies the schema but not the runtime adapter is a hard failure. The remaining limitation is that only PHYS 230 has a completed *visual* preflight, and no full ingestion has been run.
+> **Re-verified (2026-11-13, after the fixtures were added):** the supplied bytes now match this report, and the corpus is complete. `scripts/validate_datasets.py` reports 61 passed, 0 warnings, 0 errors, 0 pending; all five reading checksums and page counts match the manifest; the PHYS 230 `sha256` (`9cc30f28…`) and its 11-page count match the preflight above. The validator now also builds the canonical domain model (14 courses, 1 programme, 5 readings, 2 students) so a file that satisfies the schema but not the runtime adapter is a hard failure. The remaining limitation is that only PHYS 230 has a completed *visual* preflight, and no full ingestion has been run. The conversation suite referenced below was reconstructed from AGENTS.md section 14 on 2026-11-14 because the originally referenced file was not present; its `provenance` field records that.
 
 ## Files checked
 
 - `data/samples/course-catalog.json`
 - `data/samples/student-records.json`
+- `data/samples/test-conversations.json`
 - `data/schemas/student_records.schema.json`
+- `data/schemas/test_conversations.schema.json`
 - `data/samples/course-materials/phys230-critical-mass.pdf`
+- `data/samples/course-materials/phys350-bohr-model.pdf`
+- `data/samples/course-materials/engl120-the-raven.pdf`
+- `data/samples/course-materials/hist210-niels-bohr.pdf`
+- `data/samples/course-materials/hist250-demon-core.pdf`
 
 ## Structural checks
 
@@ -42,7 +48,7 @@
 | Equation extraction | Text-only extraction missed displayed formulas; page-image/formula verification required |
 | Table extraction | Three table CSVs emitted; visual header/cell QA still required |
 | OCR strategy | Selective OCR only; blanket OCR is not required for this born-digital file |
-| Full Docling ingestion | NOT YET RUN; this is a preflight/strategy assessment, not a completed RAG ingestion |
+| Full ingestion | NOT YET RUN; this is a preflight/strategy assessment, not a completed RAG ingestion |
 
 The generic embedded-image extractor also returned repeated instances of four unique image payloads across pages. Figure inventory and page attribution must therefore come from layout/page-region associations and page renders, not the raw image-object count alone. Source attribution and the Creative Commons Attribution-ShareAlike notice on the final page must be retained.
 
@@ -59,7 +65,7 @@ A sensible core-oriented Spring 2027 proposal for `student-001` is PHYS 110 + MA
 
 ## Remaining validation work
 
-- Run the full Docling ingestion, page-count, extraction-quality and citation-provenance checks across all five supplied readings, starting with the PHYS 230 reference fixture. No full ingestion has been run yet.
+- Run the full M2 ingestion pipeline (PyMuPDF + pdfplumber behind `PdfParser`; Docling is an optional swap-in), page-count, extraction-quality and citation-provenance checks across all five supplied readings, starting with the PHYS 230 reference fixture. No full ingestion has been run yet.
 - Complete the visual preflight and QA for the four readings beyond PHYS 230 (PHYS 350, ENGL 120, HIST 210, HIST 250); only PHYS 230 has a completed visual preflight.
 - Confirm formula recognition, visual crops, table structure, and content-safety labels using the real parser/model configuration.
 - Confirm the adviser IDs against an adviser directory or identity mapping if one is later supplied. The current source provides only opaque adviser ID strings.
@@ -68,11 +74,14 @@ A sensible core-oriented Spring 2027 proposal for `student-001` is PHYS 110 + MA
 
 ## Sample conversation acceptance suite
 
-The supplied sample conversations are recorded in `data/samples/test-conversations.json` and validated against `data/schemas/test_conversations.schema.json`.
+The conversation suite was not present in the repository as received. A suite reconstructed
+from AGENTS.md section 14 is checked in at `data/samples/test-conversations.json` and
+validated against `data/schemas/test_conversations.schema.json`; its `provenance` field
+records the reconstruction. It is a test script, not academic evidence.
 
 | Scenario | Current status | Key assertions |
 |---|---|---|
-| PHYS 350 Bohr model question + diagram follow-up | PDF present; ingestion, diagram verification and retrieval pending | Resolve the Fall 2026 PHYS 350 enrolment, ingest and index the Bohr model reading, preserve document/page/figure context across turns, and cite the diagram. Complete the diagram verification and retrieval checks before asserting the expected value of 8; do not hard-code it until the supplied diagram has been inspected and confirms it. |
+| PHYS 350 Bohr model question + diagram follow-up | PDF present; ingestion, diagram verification and retrieval pending | Resolve the Fall 2026 PHYS 350 enrolment, ingest and index the Bohr model reading, preserve document/page/figure context across turns, and cite the diagram. The fixture records `expected_answer_value: null` with `value_verification_status: pending_diagram_inspection`; do not assert 8 until the supplied diagram has been inspected and confirms it. |
 | Spring 2027 12-unit plan + 8-unit follow-up | READY for deterministic tests | Start with PHYS 110 + MATH 150 + PHYS 340 (12 units); on follow-up recompute to PHYS 110 + MATH 150 (8 units) as the core-progression default. Keep the request-specific cap in thread state and leave the catalogue's 16-unit policy unchanged. |
 
 The 8-unit default prioritizes the two outstanding Physics core foundations and their downstream prerequisite paths. PHYS 340 remains prerequisite-eligible and can be chosen instead when the student explicitly prefers to prioritize Physics electives.
