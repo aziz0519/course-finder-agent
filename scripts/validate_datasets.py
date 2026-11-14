@@ -34,6 +34,8 @@ from typing import Any, Literal
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "backend"))
 
 from app.core.config import REPO_ROOT, get_settings
+from app.domain.errors import DomainError
+from app.ingestion.json_adapters import adapt_catalogue, adapt_students
 
 Severity = Literal["ok", "warn", "error", "pending"]
 
@@ -612,6 +614,56 @@ def validate_manifest(report: Report, manifest: Any, data_root: Path) -> None:
     )
 
 
+# --- Canonical domain model -----------------------------------------------------------
+
+
+def validate_canonical_adapters(
+    report: Report, catalogue: Any, students: Any, data_root: Path
+) -> None:
+    """Build the canonical domain model the application actually uses.
+
+    The structural checks above validate the raw JSON; this one proves the same files
+    pass the adapters that the API, planner, and tutor will call. A file that satisfies
+    a JSON Schema but not the adapter is not usable at runtime, so this is a hard gate.
+    """
+    label = "Canonical domain model builds from the fixtures"
+    if not isinstance(catalogue, dict) or not isinstance(students, dict):
+        return
+
+    try:
+        catalog = adapt_catalogue(catalogue, dataset_root=data_root / "samples")
+        adapted_students = adapt_students(students, catalog=catalog)
+    except DomainError as exc:
+        report.add("error", label, str(exc))
+        return
+
+    issues: list[str] = []
+    raw_course_count = len(catalogue.get("courses") or [])
+    raw_student_count = len(students.get("students") or [])
+
+    if len(catalog.courses) != raw_course_count:
+        issues.append(f"adapted {len(catalog.courses)} of {raw_course_count} courses")
+    if len(adapted_students) != raw_student_count:
+        issues.append(f"adapted {len(adapted_students)} of {raw_student_count} students")
+    if catalog.policy.current_term.label != EXPECTED_CURRENT_TERM:
+        issues.append(f"current_term={catalog.policy.current_term.label!r}")
+    if catalog.policy.next_term.label != EXPECTED_NEXT_TERM:
+        issues.append(f"next_term={catalog.policy.next_term.label!r}")
+    if catalog.policy.max_units_per_term != EXPECTED_MAX_UNITS_PER_TERM:
+        issues.append(f"max_units_per_term={catalog.policy.max_units_per_term}")
+
+    report.add(
+        "ok" if not issues else "error",
+        label,
+        "; ".join(issues)
+        if issues
+        else (
+            f"{len(catalog.courses)} courses, {len(catalog.programs)} programme(s), "
+            f"{len(catalog.reading_documents)} reading(s), {len(adapted_students)} students"
+        ),
+    )
+
+
 # --- Entry point ---------------------------------------------------------------------
 
 
@@ -693,6 +745,8 @@ def main(argv: list[str] | None = None) -> int:
 
     if manifest is not None:
         validate_manifest(report, manifest, data_root)
+
+    validate_canonical_adapters(report, catalogue, students, data_root)
 
     report.render("Phase 0 dataset validation")
 

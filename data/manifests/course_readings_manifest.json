@@ -1,14 +1,16 @@
 {
-  "manifest_version": 3,
+  "manifest_version": 4,
   "path_base": "data_root",
   "scenario_current_term": "Fall 2026",
   "scenario_next_term": "Spring 2027",
   "documents_expected": 5,
-  "documents_present": 0,
+  "documents_present": 5,
+  "verified_at": "2026-11-13",
   "notes": [
     "relative_path is resolved against DATA_ROOT (./data). Catalogue materials[].file is resolved against the dataset root (./data/samples), because that is how the catalogue declares it.",
-    "No PDF bytes are present in this repository yet. Entries carry expected_* values from the earlier preflight; they are verified against the real file on arrival and then promoted to sha256/page_count.",
-    "Original PDFs are excluded from version control by .gitignore; presence and integrity are proven by this manifest."
+    "All five checksums and page counts below were measured from the supplied bytes with PyMuPDF and verified by scripts/validate_datasets.py.",
+    "Original PDFs are excluded from version control by .gitignore; presence and integrity are proven by this manifest.",
+    "Page counts sit inside the documented 9-17 page range, and every file carries an extractable text layer (see text_characters)."
   ],
   "documents": [
     {
@@ -16,39 +18,57 @@
       "title": "Critical mass",
       "week": 6,
       "relative_path": "samples/course-materials/phys230-critical-mass.pdf",
-      "status": "pending",
-      "expected_sha256": "9cc30f28212b81a3886bb418511630c932ddab8a7150015d95b2ee86941f6539",
-      "expected_size_bytes": 622217,
-      "expected_page_count": 11,
-      "preflight_note": "Structural and visual preflight was completed on 2026-11-13: 11 pages, born-digital with a usable text layer, figures on pages 1/5/9/10, tables on 6/9/11, displayed equations on page 7. The file bytes are not in this repository, so these remain expected values until re-verified."
+      "status": "present",
+      "sha256": "9cc30f28212b81a3886bb418511630c932ddab8a7150015d95b2ee86941f6539",
+      "size_bytes": 622217,
+      "page_count": 11,
+      "text_characters": 21454,
+      "reference_fixture": true,
+      "preflight_note": "Born-digital, usable text layer. Logical visuals: figures on pages 1/5/9/10, tables on 6/9/11, displayed equations on page 7. Text-only extraction misses the displayed formulas, so equation recognition must be checked against page renders. Final page carries attribution and a CC BY-SA notice."
     },
     {
       "course_code": "PHYS 350",
       "title": "Bohr model",
       "week": 2,
       "relative_path": "samples/course-materials/phys350-bohr-model.pdf",
-      "status": "pending"
+      "status": "present",
+      "sha256": "622528681a286090f9a509815a31ca02cbcc1fe92b1dd731f697e329b8d2adcf",
+      "size_bytes": 421785,
+      "page_count": 12,
+      "text_characters": 22406
     },
     {
       "course_code": "ENGL 120",
       "title": "The Raven",
       "week": 4,
       "relative_path": "samples/course-materials/engl120-the-raven.pdf",
-      "status": "pending"
+      "status": "present",
+      "sha256": "d84bf67be1b4d236d25209fb9ab5ec9b27e4dfe3f916a9b248a461c716035b06",
+      "size_bytes": 1019232,
+      "page_count": 15,
+      "text_characters": 29143
     },
     {
       "course_code": "HIST 210",
       "title": "Niels Bohr",
       "week": 11,
       "relative_path": "samples/course-materials/hist210-niels-bohr.pdf",
-      "status": "pending"
+      "status": "present",
+      "sha256": "3d96a5a637fbe4be57e59e309330aa54c61a6fe7d79451702d260065b1ed6236",
+      "size_bytes": 552429,
+      "page_count": 17,
+      "text_characters": 36722
     },
     {
       "course_code": "HIST 250",
       "title": "Demon core",
       "week": 9,
       "relative_path": "samples/course-materials/hist250-demon-core.pdf",
-      "status": "pending"
+      "status": "present",
+      "sha256": "e56e78ce782fd223ee6f607ea114563ef1efb25455a6d64c875bd1f390e5c05a",
+      "size_bytes": 382239,
+      "page_count": 9,
+      "text_characters": 16126
     }
   ]
 }
