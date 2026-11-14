@@ -150,6 +150,27 @@ class ConversationRepository:
             revision=row["revision"],
         )
 
+    def list_for_owner(self, owner_user_id: str) -> tuple[ConversationThread, ...]:
+        """List only threads owned by the verified caller."""
+
+        with self.connect() as db:
+            rows = db.execute(
+                "SELECT * FROM conversations WHERE owner_user_id=? ORDER BY updated_at DESC",
+                (owner_user_id,),
+            ).fetchall()
+        return tuple(
+            ConversationThread(
+                thread_id=row["thread_id"],
+                owner_user_id=row["owner_user_id"],
+                authorized_student_id=row["authorized_student_id"],
+                state=ConversationState.model_validate_json(row["state_json"]),
+                created_at=datetime.fromisoformat(row["created_at"]),
+                updated_at=datetime.fromisoformat(row["updated_at"]),
+                revision=row["revision"],
+            )
+            for row in rows
+        )
+
     def append_turn(
         self,
         thread: ConversationThread,
