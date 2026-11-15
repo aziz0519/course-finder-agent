@@ -9,6 +9,15 @@ def test_routes_planning_and_tutoring() -> None:
     assert route_intent("What is the weather?", state) == "unsupported"
 
 
+def test_missing_academic_facts_preempt_planning_route() -> None:
+    state = ConversationState(last_intent="planner")
+    assert (
+        route_intent("Are there seats available for Spring 2027 courses?", state)
+        == "unsupported"
+    )
+    assert route_intent("What is my class schedule?", state) == "unsupported"
+
+
 def test_routes_contextual_follow_ups() -> None:
     planner = ConversationState(last_intent="planner", planning_unit_cap=12)
     assert route_intent("Cap me at 8 units", planner) == "planner"

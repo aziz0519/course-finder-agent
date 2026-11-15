@@ -1,7 +1,8 @@
 # M3 conversation workflow
 
 M3 is complete. It provides a framework-independent, provider-neutral conversation
-workflow; it does not expose an HTTP route or authenticate users (those remain M4).
+workflow. M3 itself did not expose HTTP routes or authenticate users; the local M4 API
+now supplies that boundary.
 
 ## Implemented
 
@@ -31,12 +32,13 @@ workflow; it does not expose an HTTP route or authenticate users (those remain M
 
 ## Deliberate boundaries
 
-- Tutor prose responses use the deterministic offline composer. A future network-backed
-  composer must retain claim-level citations and add timeouts, retry/token/cost limits,
-  and redacted logs before it can be configured.
+- At M3 completion, tutor prose responses used the deterministic offline composer.
+  M4 adds an optional OpenAI adapter with claim-level evidence references, request
+  timeouts and bounded input/output; its live answer quality has not been evaluated.
 - No LangGraph dependency is required for this deterministic initial graph.
-- `ReadingScope` is still supplied by a trusted caller. M4 must mint it from verified
-  identity and authorization policy and expose owner-scoped API routes.
+- `ReadingScope` is supplied by a trusted caller. The local M4 API now mints it from the
+  authenticated local principal and student record; Cognito identity is not implemented
+  in this demo milestone.
 - No chain-of-thought, unrestricted SQL/filesystem access, PDF bytes, or page renders are
   placed in conversation state.
 
@@ -48,4 +50,6 @@ workflow; it does not expose an HTTP route or authenticate users (those remain M
   ambiguous, and resolves approved Figure 2 with a page-level citation.
 - Owner checks, stale writes, interrupted writes, trace persistence, restricted requests,
   and invalid source references have deterministic tests.
-- Current verification: Ruff and mypy pass; `pytest` passes 193 tests.
+- Verification at M3 completion: Ruff and mypy passed; `pytest` passed 193 tests. This is
+  the historical M3 milestone count; current repository checks are documented in
+  `docs/M4_LOCAL_API.md`.

@@ -49,7 +49,7 @@ class Settings(BaseSettings):
     session_ttl_seconds: int = 3600
 
     # Model providers, kept behind interfaces. "offline" runs deterministically.
-    model_provider: str = "offline"
+    model_provider: Literal["offline", "openai"] = "offline"
     model_name: str = ""
     openai_api_key: SecretStr | None = None
     embedding_model: str = ""

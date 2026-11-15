@@ -65,8 +65,12 @@ Reported confidence is a parser heuristic, not calibrated extraction accuracy.
 
 ## Reproducibility and regression results
 
-- Re-verified 2026-11-14: `make check`: Ruff passes; mypy passes (45 source files);
-  **180 tests pass**.
+- M2 ingestion-time baseline (2026-11-14): `make check`: Ruff passed; mypy passed
+  (45 source files); **180 tests passed**. These are historical M2 baseline counts.
+- Current whole-repository verification after M4 local API work: Ruff passes, mypy passes
+  (**81 source files**), **215 tests pass**, and strict dataset validation reports
+  **62 passed, 0 warnings/errors/pending**. OpenAI answer-composer tests use a mocked
+  transport; no live provider call is included.
 - `uv run python scripts/validate_datasets.py --require-complete`: **62 passed**,
   zero warnings/errors/pending inputs.
 - Full-corpus tests verify page coverage, source checksums, attribution, reference
@@ -81,7 +85,8 @@ Reported confidence is a parser heuristic, not calibrated extraction accuracy.
   injection-shaped inputs, crop checksums, and pre-filtered optional embedding input.
 
 These are correctness regressions, **not** a statistically meaningful answer-quality
-or safety accuracy threshold. Authenticated multi-turn tutoring, generated-answer
-grounding, HTTP citation delivery, complete RBAC, and production adapters remain
-M3/M4 and later acceptance work. Usage and review instructions:
+or safety accuracy threshold. M4 local HTTP regressions now cover authenticated
+multi-turn tutoring/planning, citation and approved-crop delivery, and student/adviser/
+admin scope checks. Live OpenAI answer quality, Cognito/production identity, and full
+visual QA remain unverified. Usage and review instructions:
 [`M2_READINGS.md`](M2_READINGS.md).

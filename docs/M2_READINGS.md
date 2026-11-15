@@ -119,8 +119,9 @@ result = retriever.search(scope, "PHYS 350", "hydrogen spectrum transitions")
 ```
 
 This is a scoped service interface, **not a substitute for authentication/RBAC**.
-M4 must enforce identity-to-student mapping, adviser assignment, conversation
-ownership, and admin-only ingestion before invoking it. No public endpoints exist yet.
+The M4 local API constructs it after local identity-to-student mapping and enforces
+adviser assignment, conversation ownership, and admin-only ingestion before invoking it.
+Cognito/production identity is not implemented or tested in this demo.
 
 - Filter course/document IDs and active versions first, then safe, reviewed chunks.
   Only those candidates enter an ephemeral SQLite FTS5 BM25 index.

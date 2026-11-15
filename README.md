@@ -16,10 +16,14 @@ assistant says so instead of guessing.
 | **M1** | Deterministic domain core: adapters, prerequisite eligibility, degree progress | ✅ **complete** (2026-11-13) |
 | **M2** | Reading ingestion and course-scoped retrieval with page citations | **implemented** — visual QA remains gated |
 | **M3** | Conversation state, supervisor routing, tutor and planner | ✅ **complete** (2026-11-14) |
-| M4 | API, local auth, RBAC and negative security tests | |
+| **M4** | Local API, local auth, RBAC and HTTP acceptance tests | ✅ **implemented** (local demo scope) |
 | M5 | UI (Gradio over the API is the recommendation; Next.js remains supported) | |
 | M6 | Deployable demo (container + single CDK stack) | |
 | M7 | Acceptance run, quality baseline, documentation | |
+
+**Current repository verification:** Ruff passes, mypy passes across **81 source files**,
+**215 tests pass**, and strict fixture validation reports **62 passed, 0 warnings, 0
+errors, 0 pending**. OpenAI is tested with a mocked transport; no live API key was used.
 
 ## M0 exit gate — confirmed
 
@@ -190,7 +194,7 @@ No model calls, database server, or AWS credentials are needed.
 | Citations | Title, 1-based PDF page, checksum/version, chunk/asset IDs and bbox; scoped round-trip resolver |
 | Versioning | Idempotent ingestion, atomic active pointer, failed versions cannot displace an active one |
 | Safety | PHYS 230 and HIST 250 fully quarantined; other weapons-context pages restricted |
-| Verification (2026-11-14) | `make check`: lint clean, mypy clean (**45 source files**), **180 tests pass**; strict dataset validation: **62 passed**, no warnings/errors/pending inputs |
+| M2 baseline at ingestion (2026-11-14) | Ruff clean, mypy clean (**45 source files**), **180 tests pass**; strict dataset validation: **62 passed**, no warnings/errors/pending inputs. Current whole-repository checks are summarized above. |
 
 The Bohr shell-capacity value is now source-verified: Figure 2 on PDF page 4 explicitly
 labels up to eight electrons for the second level. The conversation fixture records that
@@ -200,8 +204,9 @@ conversation evidence leaves multiple figures plausible.
 See [M2 usage and boundaries](docs/M2_READINGS.md) and the
 [ingestion baseline](docs/M2_INGESTION_REPORT.md). Full visual QA is **not** complete:
 unreviewed formulas/charts/tables remain unavailable, and no exact chart digitization
-or OCR/VLM enrichment is enabled. Tutor answer generation and conversation state are M3;
-authentication and HTTP delivery remain M4. The initial workflow is documented in
+or OCR/VLM enrichment is enabled. Tutor answer generation and conversation state were
+implemented in M3; local authentication and HTTP delivery are implemented in M4. The
+initial workflow is documented in
 [`docs/M3_CONVERSATIONS.md`](docs/M3_CONVERSATIONS.md).
 
 ## M3 — conversation workflow
@@ -212,8 +217,41 @@ preference continuity, source-version provenance, and redacted trace IDs. Turn w
 atomic and stale concurrent checkpoints fail closed. The canonical Bohr and 12-to-8-unit
 planning conversations run end to end at the service boundary.
 
-Current M3 verification: Ruff clean, mypy clean (**57 source files**), and **193 tests
-pass**. Authentication and HTTP delivery remain M4.
+At M3 completion, Ruff and mypy passed and **193 tests passed**. Those are historical
+milestone results, not the current suite total; see the current repository verification
+above. M4 adds HTTP-level acceptance coverage for the M3 planner and tutor flows.
+
+## M4 — local authenticated API demo
+
+M4 exposes the local FastAPI API with Argon2id-hashed disposable demo credentials,
+expiring/revocable HTTP-only sessions, CSRF protection, role checks, owner-scoped
+conversations, deterministic planning, citation resolution, and approved visual-crop
+delivery. The local workflow uses the existing validated JSON/PDF adapters and SQLite
+repositories; it does not require Cognito, SQLAlchemy, or a database server.
+
+The OpenAI answer composer is optional. The deterministic offline composer remains the
+default; setting `MODEL_PROVIDER=openai`, `MODEL_NAME`, and a local `OPENAI_API_KEY`
+enables bounded evidence-linked composition. No key is required for tests.
+
+### Run the M4 API demo
+
+Copy `.env.example` to `.env`, replace `LOCAL_DEV_PASSWORD` with a disposable local demo
+password, then run:
+
+```bash
+uv run uvicorn app.main:app --app-dir backend --reload
+```
+
+Use the same configured local password with usernames `student-001`, `student-002`,
+`adviser-001`, `adviser-002`, and `admin`; each username maps to its demo role/scope.
+This shared local-only credential scheme is for demonstrations and must not be exposed
+to an untrusted network. Initialize the reading index through the admin ingestion API.
+See [`docs/M4_LOCAL_API.md`](docs/M4_LOCAL_API.md) for endpoint, CSRF, ingestion, and
+conversation instructions.
+
+Cognito authentication and `/auth/callback` remain a future integration seam and are
+not tested or part of this local M4 demo gate. The API intentionally does not claim
+production identity support.
 
 ## Open decisions
 
@@ -227,13 +265,13 @@ See [`docs/decisions/0001-mvp-stack.md`](docs/decisions/0001-mvp-stack.md) and
 
 ## Known limitations
 
-- All five readings are locally ingested, but no chat/API is exposed until M3/M4.
-- Only explicitly reviewed visuals are available. Remaining assets stay `needs_review`;
-  formula-heavy pages conservatively withhold overlapping prose pending finer extraction.
+- The local chat/API is available, but only reviewed reading evidence and approved
+  visual assets are exposed. Remaining assets stay `needs_review`; formula-heavy pages
+  conservatively withhold overlapping prose pending finer extraction.
 - The two nuclear-system readings are entirely withheld from student retrieval pending
   a reviewed safe-excerpt set. Full PDFs/page renders are administrator-only artifacts.
-- The retrieval scope is a server-side service contract, not authentication; M4 must
-  construct it from verified identities and authorization decisions.
+- Local M4 constructs retrieval scope from the authenticated local principal and
+  authoritative student record. Cognito/production identity is not implemented or tested.
 - Degree progress is only as reliable as the supplied requirements JSON.
 - No seats, timetable, instructor, or grade data exists in the fixtures and none will be
   invented.

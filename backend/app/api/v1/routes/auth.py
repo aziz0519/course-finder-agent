@@ -35,6 +35,11 @@ def login(
             payload.password,
             client_key,
         )
+    except RuntimeError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Local authentication is not configured. Set LOCAL_DEV_PASSWORD.",
+        ) from exc
     except LoginRateLimitedError as exc:
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
