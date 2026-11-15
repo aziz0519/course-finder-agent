@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+import json
+from pathlib import Path
+
 import pytest
-from aws_cdk import assertions
+from aws_cdk import ArnFormat, assertions
 from infra.app import create_app
 from infra.config import EnvConfig
 
@@ -14,6 +17,64 @@ PROD = EnvConfig(env_name="prod", account="111111111111", region="ap-southeast-1
 def _template(config: EnvConfig = DEV) -> assertions.Template:
     _app, stack = create_app(config)
     return assertions.Template.from_stack(stack)
+
+
+@pytest.mark.parametrize("config", [DEV, PROD])
+def test_synthesis_needs_no_context_and_preserves_two_azs(config: EnvConfig) -> None:
+    app, stack = create_app(config)
+    assembly = app.synth()
+    manifest = json.loads((Path(assembly.directory) / "manifest.json").read_text())
+    assert not manifest.get("missing", [])
+    if config.account:
+        assert stack.account == config.account
+        assert stack.region == config.region
+    template = assertions.Template.from_stack(stack)
+    subnets = template.find_resources("AWS::EC2::Subnet")
+    assert len(subnets) == 6
+    assert [subnet["Properties"]["AvailabilityZone"] for subnet in subnets.values()] == [
+        {"Fn::Select": [index, {"Fn::GetAZs": ""}]} for index in (0, 1, 0, 1, 0, 1)
+    ]
+
+
+@pytest.mark.parametrize("config", [DEV, PROD])
+def test_artifact_key_allows_logs_only_for_application_log_groups(config: EnvConfig) -> None:
+    _app, stack = create_app(config)
+    template = assertions.Template.from_stack(stack)
+    body = template.to_json()
+    groups = template.find_resources("AWS::Logs::LogGroup")
+    key_refs = [group["Properties"]["KmsKeyId"]["Fn::GetAtt"][0] for group in groups.values()]
+    assert len(set(key_refs)) == 1
+    key = body["Resources"][key_refs[0]]
+    statements = key["Properties"]["KeyPolicy"]["Statement"]
+    log_statements = [s for s in statements if s.get("Sid") == "AllowApplicationLogs"]
+    assert len(log_statements) == 1
+    statement = log_statements[0]
+    assert statement["Effect"] == "Allow"
+    assert set(statement["Action"]) == {
+        "kms:Encrypt",
+        "kms:Decrypt",
+        "kms:ReEncrypt*",
+        "kms:GenerateDataKey*",
+        "kms:Describe*",
+    }
+    assert statement["Resource"] == "*"
+    assert statement["Principal"] == {
+        "Service": stack.resolve(f"logs.{stack.region}.{stack.url_suffix}")
+    }
+    expected_arns = [
+        stack.resolve(
+            stack.format_arn(
+                service="logs",
+                resource="log-group",
+                resource_name=group["Properties"]["LogGroupName"],
+                arn_format=ArnFormat.COLON_RESOURCE_NAME,
+            )
+        )
+        for group in groups.values()
+    ]
+    assert statement["Condition"] == {
+        "ArnEquals": {"kms:EncryptionContext:aws:logs:arn": expected_arns}
+    }
 
 
 def test_stack_contains_target_architecture_resources() -> None:

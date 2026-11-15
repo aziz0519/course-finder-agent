@@ -7,10 +7,12 @@ adapters, Cognito token verification, and deployment are separate release tasks.
 from __future__ import annotations
 
 from aws_cdk import (
+    ArnFormat,
     CfnOutput,
     CfnParameter,
     Duration,
     Environment,
+    Fn,
     RemovalPolicy,
     Stack,
     Tags,
@@ -81,6 +83,11 @@ class CourseFinderStack(Stack):
         self._create_application_services()
         self._create_observability()
         self._create_outputs()
+
+    @property
+    def availability_zones(self) -> list[str]:
+        """Resolve two AZs at deployment without account/Region context lookups."""
+        return [Fn.select(index, Fn.get_azs()) for index in range(2)]
 
     def _tag_resources(self) -> None:
         Tags.of(self).add("Application", "course-finder-agent")
@@ -234,6 +241,33 @@ class CourseFinderStack(Stack):
             if self.config.is_production
             else RemovalPolicy.DESTROY,
             alias=f"alias/course-finder-{self.config.env_name}-artifacts",
+        )
+        self.artifact_key.add_to_resource_policy(
+            iam.PolicyStatement(
+                sid="AllowApplicationLogs",
+                principals=[iam.ServicePrincipal(f"logs.{self.region}.{self.url_suffix}")],
+                actions=[
+                    "kms:Encrypt",
+                    "kms:Decrypt",
+                    "kms:ReEncrypt*",
+                    "kms:GenerateDataKey*",
+                    "kms:Describe*",
+                ],
+                resources=["*"],
+                conditions={
+                    "ArnEquals": {
+                        "kms:EncryptionContext:aws:logs:arn": [
+                            self.format_arn(
+                                service="logs",
+                                resource="log-group",
+                                resource_name=f"/ecs/course-finder/{self.config.env_name}/{name}",
+                                arn_format=ArnFormat.COLON_RESOURCE_NAME,
+                            )
+                            for name in ("frontend", "api", "ingestion-worker")
+                        ]
+                    }
+                },
+            )
         )
         self.bucket = s3.Bucket(
             self,
