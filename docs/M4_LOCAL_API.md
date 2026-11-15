@@ -125,8 +125,8 @@ make check
 uv run pytest backend/tests/integration/test_api_v1.py -q
 ```
 
-Latest repository-wide run: Ruff passes; mypy passes across **91 source files**;
-**262 tests pass**; strict dataset validation reports **62 passed, 0 warnings, 0 errors,
+Latest repository-wide run: Ruff passes; mypy passes across **98 source files**;
+**285 tests pass**; strict dataset validation reports **62 passed, 0 warnings, 0 errors,
 0 pending**. The tests do not call OpenAI or Cognito.
 
 The local API tests cover login failure/rate limiting, logout revocation, CSRF,

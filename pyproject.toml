@@ -25,6 +25,10 @@ dev = [
     "mypy>=1.13",
     "types-jsonschema>=4.23",
 ]
+infra = [
+    "aws-cdk-lib>=2.180,<3",
+    "constructs>=10,<11",
+]
 ui = [
     "gradio>=6.32",
 ]
@@ -37,7 +41,7 @@ build-backend = "hatchling.build"
 packages = ["backend/app"]
 
 [tool.pytest.ini_options]
-testpaths = ["backend/tests"]
+testpaths = ["backend/tests", "infra/tests"]
 pythonpath = ["backend", "."]
 addopts = "-q"
 
@@ -59,8 +63,13 @@ select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
 [tool.mypy]
 python_version = "3.12"
 mypy_path = "backend:scripts"
-files = ["backend/app", "backend/tests", "scripts", "ui"]
+files = ["backend/app", "backend/tests", "scripts", "ui", "infra"]
 check_untyped_defs = true
 warn_unused_ignores = true
 warn_redundant_casts = true
 no_implicit_optional = true
+
+[[tool.mypy.overrides]]
+module = ["aws_cdk.*", "constructs.*"]
+ignore_missing_imports = true
+follow_imports = "skip"
