@@ -7,9 +7,26 @@ from fastapi import APIRouter, HTTPException, status
 from app.api.v1.dependencies import PrincipalDep, ServicesDep
 from app.api.v1.routes.students import degree_progress, student_profile
 from app.domain.errors import UnknownStudentError
-from app.schemas.student import AdviserStudentResponse
+from app.schemas.student import AdviserStudentResponse, StudentProfile
 
 router = APIRouter(prefix="/advisers", tags=["advisers"])
+
+
+@router.get("/students", response_model=tuple[StudentProfile, ...])
+def list_assigned_students(
+    principal: PrincipalDep,
+    services: ServicesDep,
+) -> tuple[StudentProfile, ...]:
+    if principal.role != "adviser" or not principal.adviser_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Adviser role required.",
+        )
+    return tuple(
+        student_profile(student)
+        for student in services.dataset().students
+        if student.adviser_id == principal.adviser_id
+    )
 
 
 @router.get("/students/{student_id}", response_model=AdviserStudentResponse)

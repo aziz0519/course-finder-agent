@@ -248,6 +248,41 @@ def test_logout_revokes_session_and_login_is_rate_limited(api_client: TestClient
     assert limited.status_code == 429
 
 
+def test_student_materials_and_adviser_assignment_list(api_client: TestClient) -> None:
+    login(api_client, "student-001")
+    materials = api_client.get("/api/v1/students/me/materials")
+    assert materials.status_code == 200
+    payload = materials.json()
+    assert payload["student_id"] == "student-001"
+    assert {course["course_code"] for course in payload["courses"]} == {
+        "PHYS 350",
+        "HIST 210",
+        "ENGL 120",
+    }
+    bohr = next(
+        course for course in payload["courses"] if course["course_code"] == "PHYS 350"
+    )
+    reading = bohr["readings"][0]
+    assert reading["document_id"] == "phys350-bohr-model"
+    assert reading["ingested"] is False
+    assert reading["page_count"] == 12
+    assert reading["approved_assets"] == 0
+
+    assert api_client.get("/api/v1/advisers/students").status_code == 403
+
+    adviser = TestClient(api_client.app)
+    login(adviser, "adviser-001")
+    assigned = adviser.get("/api/v1/advisers/students")
+    assert assigned.status_code == 200
+    assert [item["student_id"] for item in assigned.json()] == ["student-001"]
+
+    other = TestClient(api_client.app)
+    login(other, "adviser-002")
+    assert [item["student_id"] for item in other.get("/api/v1/advisers/students").json()] == [
+        "student-002"
+    ]
+
+
 def test_bohr_conversation_and_owner_scoped_citations(api_client: TestClient) -> None:
     services = cast(FastAPI, api_client.app).state.services
     dataset = services.dataset()
@@ -319,6 +354,35 @@ def test_bohr_conversation_and_owner_scoped_citations(api_client: TestClient) ->
     assert asset.headers["content-type"] == "image/png"
     assert asset.headers["cache-control"] == "private, no-store"
 
+    page_render = api_client.get(
+        f"/api/v1/chat/sessions/{thread_id}/documents/phys350-bohr-model/pages/4"
+    )
+    assert page_render.status_code == 200
+    assert page_render.headers["content-type"] == "image/png"
+    assert page_render.headers["cache-control"] == "private, no-store"
+
+    # In scope, but not cited in this thread: no browsing beyond conversation evidence.
+    assert (
+        api_client.get(
+            f"/api/v1/chat/sessions/{thread_id}/documents/hist210-niels-bohr/pages/1"
+        ).status_code
+        == 404
+    )
+    # Outside the student's current-course scope.
+    assert (
+        api_client.get(
+            f"/api/v1/chat/sessions/{thread_id}/documents/phys230-critical-mass/pages/1"
+        ).status_code
+        == 404
+    )
+
+    materials = api_client.get("/api/v1/students/me/materials").json()
+    bohr = next(
+        course for course in materials["courses"] if course["course_code"] == "PHYS 350"
+    )
+    assert bohr["readings"][0]["ingested"] is True
+    assert bohr["readings"][0]["approved_assets"] == 2
+
     other = TestClient(api_client.app)
     login(other, "student-002")
     assert (
@@ -330,6 +394,12 @@ def test_bohr_conversation_and_owner_scoped_citations(api_client: TestClient) ->
     assert (
         other.get(
             f"/api/v1/chat/sessions/{thread_id}/assets/{visual_citation['asset_id']}"
+        ).status_code
+        == 404
+    )
+    assert (
+        other.get(
+            f"/api/v1/chat/sessions/{thread_id}/documents/phys350-bohr-model/pages/4"
         ).status_code
         == 404
     )

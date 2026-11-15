@@ -110,6 +110,29 @@ class ReadingRepository:
             for row in rows
         ]
 
+    def active_reading(
+        self,
+        document_id: str,
+        document_ids: frozenset[str],
+    ) -> tuple[ParsedReading, Path] | None:
+        """Return one active reading, but only when the caller's scope lists it."""
+
+        if not document_ids or document_id not in document_ids:
+            return None
+        with self.connect() as db:
+            row = db.execute(
+                "SELECT v.parsed_json, v.artifact_dir FROM reading_versions v "
+                "JOIN active_readings a ON a.document_id=v.document_id "
+                "AND a.version=v.version WHERE v.document_id=?",
+                (document_id,),
+            ).fetchone()
+        if row is None:
+            return None
+        return (
+            ParsedReading.model_validate_json(row["parsed_json"]),
+            self._artifact_path(row["artifact_dir"]),
+        )
+
     def _artifact_path(self, relative: str) -> Path:
         path = (self.root / relative).resolve()
         if not path.is_relative_to(self.root):

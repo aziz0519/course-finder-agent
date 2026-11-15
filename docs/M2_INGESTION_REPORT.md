@@ -68,7 +68,7 @@ Reported confidence is a parser heuristic, not calibrated extraction accuracy.
 - M2 ingestion-time baseline (2026-11-14): `make check`: Ruff passed; mypy passed
   (45 source files); **180 tests passed**. These are historical M2 baseline counts.
 - Current whole-repository verification after M4 local API work: Ruff passes, mypy passes
-  (**81 source files**), **215 tests pass**, and strict dataset validation reports
+  (**91 source files**), **262 tests pass**, and strict dataset validation reports
   **62 passed, 0 warnings/errors/pending**. OpenAI answer-composer tests use a mocked
   transport; no live provider call is included.
 - `uv run python scripts/validate_datasets.py --require-complete`: **62 passed**,

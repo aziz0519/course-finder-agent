@@ -58,11 +58,14 @@ quality gate. `PdfParser` is the seam for swapping Docling in per document.
 
 ## Open decisions
 
-1. **Frontend:** Gradio (recommended), Next.js, or FastAPI + Jinja/HTMX. Blocks M5 only.
-2. **Infrastructure tier:** local-first (recommended) or the tier-1 demo stack. Blocks M6.
+1. **Infrastructure tier:** local-first (recommended) or the tier-1 demo stack. Blocks M6.
 
 ## Resolved
 
+- **Frontend (2026-11-15):** Gradio over the FastAPI boundary, implemented in M5. The UI
+  holds only a session cookie and CSRF token and calls the authenticated API for every
+  action. Next.js remains a possible later replacement because the API contract is
+  framework-neutral.
 - **Fixture provenance (2026-11-14):** the authoritative JSON fixtures and all five PDFs
   are now present. Checksums and page counts are recorded in
   `data/manifests/course_readings_manifest.json` and enforced by

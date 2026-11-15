@@ -103,8 +103,8 @@ Never commit `.env` or place an API key in frontend code, logs, fixtures, or scr
 All routes use `/api/v1`:
 
 - `POST /auth/login`, `GET /auth/me`, `POST /auth/logout`
-- `GET /students/me`, `GET /students/me/progress`
-- `GET /advisers/students/{student_id}`
+- `GET /students/me`, `GET /students/me/progress`, `GET /students/me/materials`
+- `GET /advisers/students`, `GET /advisers/students/{student_id}`
 - `GET /courses`, `GET /courses/{course_id}`
 - `GET /academic-plan`
 - `POST /chat/sessions`, `GET /chat/sessions`,
@@ -112,6 +112,7 @@ All routes use `/api/v1`:
   `POST /chat/sessions/{thread_id}/messages`
 - `GET /chat/sessions/{thread_id}/citations/{chunk_id}`
 - `GET /chat/sessions/{thread_id}/assets/{asset_id}`
+- `GET /chat/sessions/{thread_id}/documents/{document_id}/pages/{page_number}`
 - `POST /admin/ingestions`, `GET /admin/ingestions/{job_id}`
 
 `GET /auth/callback` is intentionally unimplemented. Cognito/JWT support is a future
@@ -124,8 +125,8 @@ make check
 uv run pytest backend/tests/integration/test_api_v1.py -q
 ```
 
-Latest repository-wide run: Ruff passes; mypy passes across **81 source files**;
-**215 tests pass**; strict dataset validation reports **62 passed, 0 warnings, 0 errors,
+Latest repository-wide run: Ruff passes; mypy passes across **91 source files**;
+**262 tests pass**; strict dataset validation reports **62 passed, 0 warnings, 0 errors,
 0 pending**. The tests do not call OpenAI or Cognito.
 
 The local API tests cover login failure/rate limiting, logout revocation, CSRF,

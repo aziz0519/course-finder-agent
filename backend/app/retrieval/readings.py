@@ -66,6 +66,18 @@ class VisualResult(DomainModel):
     note: str | None = None
 
 
+class DocumentSummary(DomainModel):
+    """Authorized reading metadata for a course-materials view; no passage text."""
+
+    document_id: str
+    course_id: str
+    title: str
+    page_count: int = Field(ge=1)
+    ingestion_version: str
+    approved_assets: int = Field(ge=0)
+    total_assets: int = Field(ge=0)
+
+
 class Embeddings(Protocol):
     """Optional configured provider; only permitted candidates are embedded.
 
@@ -278,6 +290,58 @@ class LocalRetriever:
                 if chunk.chunk_id == chunk_id and self._allowed_chunk(chunk):
                     return _evidence(reading, chunk)
         raise PermissionError("citation unavailable in the active authorized evidence")
+
+    def resolve_page(
+        self,
+        scope: ReadingScope,
+        document_id: str,
+        page_number: int,
+    ) -> Path:
+        """Resolve one rendered page image for citation display.
+
+        Only active, authorized documents are considered. Pages classified as
+        restricted are withheld even when the document is in scope.
+        """
+
+        if document_id not in scope.document_ids:
+            raise PermissionError("reading access denied")
+        active = self.repository.active_reading(document_id, scope.document_ids)
+        if active is None:
+            raise PermissionError("reading is not active for this scope")
+        reading, root = active
+        page = next(
+            (item for item in reading.pages if item.pdf_page_number == page_number),
+            None,
+        )
+        if page is None or page.safety_label != "safe":
+            raise PermissionError("page is unavailable")
+        path = (root / page.page_image_uri).resolve()
+        if not path.is_relative_to(root) or not path.is_file():
+            raise PermissionError("page render is unavailable")
+        return path
+
+    def documents(self, scope: ReadingScope) -> tuple[DocumentSummary, ...]:
+        """List active reading metadata for the authorized courses only."""
+
+        summaries: list[DocumentSummary] = []
+        for course_id in sorted(scope.course_ids):
+            for reading, _ in self.repository.active_candidates(
+                course_id, scope.document_ids
+            ):
+                summaries.append(
+                    DocumentSummary(
+                        document_id=reading.document.document_id,
+                        course_id=reading.document.course_id,
+                        title=reading.document.title,
+                        page_count=len(reading.pages),
+                        ingestion_version=reading.ingestion_version,
+                        approved_assets=sum(
+                            1 for asset in reading.assets if asset.review_status == "approved"
+                        ),
+                        total_assets=len(reading.assets),
+                    )
+                )
+        return tuple(summaries)
 
     def resolve_visual(
         self,
