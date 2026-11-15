@@ -486,3 +486,52 @@ def test_failed_request_is_audited_off_loop_and_preserves_exception(
     assert event["actor_role"] == "student"
     assert event["outcome"] == "denied"
     assert event["metadata"] == {"http_status": "500"}
+
+
+def test_cited_page_rejects_replaced_ingestion(api_client: TestClient, synthetic) -> None:
+    services = cast(FastAPI, api_client.app).state.services
+    samples, synthetic_document, review, _ = synthetic
+    document = synthetic_document.model_copy(update={
+        "document_id": "phys350-bohr-model", "course_id": "PHYS 350", "title": "Bohr model"
+    })
+    first = ingest_reading(document, samples, services.readings, review)
+    csrf = login(api_client, "student-001")
+    headers = {"X-CSRF-Token": csrf}
+    thread_id = api_client.post(
+        "/api/v1/chat/sessions", json={}, headers=headers
+    ).json()["thread_id"]
+    answer = api_client.post(
+        f"/api/v1/chat/sessions/{thread_id}/messages",
+        json={"content": "How does the Bohr model explain the hydrogen spectrum?"},
+        headers=headers,
+    )
+    assert answer.status_code == 201
+    citation = answer.json()["response"]["citations"][0]
+    assert citation["ingestion_version"] == first.ingestion_version
+    path = (
+        f"/api/v1/chat/sessions/{thread_id}/documents/{document.document_id}"
+        f"/pages/{citation['pdf_page_number']}"
+    )
+    assert api_client.get(path).status_code == 200
+    second = ingest_reading(
+        document.model_copy(update={"title": document.title + " revised"}),
+        samples, services.readings, review,
+    )
+    assert second.ingestion_version != first.ingestion_version
+    active, _ = services.readings.active_reading(
+        document.document_id, frozenset({document.document_id})
+    )
+    assert active.ingestion_version == second.ingestion_version
+    assert api_client.get(path).status_code == 404
+    versioned_path = path + "?ingestion_version=" + first.ingestion_version
+    assert api_client.get(versioned_path).status_code == 404
+    new_answer = api_client.post(
+        f"/api/v1/chat/sessions/{thread_id}/messages",
+        json={"content": "How does the Bohr model explain the hydrogen spectrum?"},
+        headers=headers,
+    )
+    assert new_answer.status_code == 201
+    new_citation = new_answer.json()["response"]["citations"][0]
+    assert new_citation["ingestion_version"] == second.ingestion_version
+    assert api_client.get(path).status_code == 200
+    assert api_client.get(versioned_path).status_code == 404

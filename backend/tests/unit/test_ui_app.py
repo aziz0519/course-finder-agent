@@ -18,7 +18,15 @@ def test_gradio_app_builds_expected_surfaces() -> None:
     assert types["tabs"] == 1
     assert types["tabitem"] == 4
     assert types["dataframe"] >= 5
-    assert types["image"] == 2
+    assert types.get("image", 0) == 0
+    assert types["html"] >= 2
+    signouts = [c["id"] for c in config["components"]
+                if c["type"] == "button" and c["props"].get("value") == "Sign out"]
+    assert len(signouts) == 3
+    bindings = [d for d in config["dependencies"]
+                if any(target[0] in signouts for target in d["targets"])]
+    assert len(bindings) == 3
+    assert all(d["outputs"] == bindings[0]["outputs"] for d in bindings)
     assert types["dropdown"] == 2
     assert types["state"] == 4
     assert len(config["dependencies"]) >= 12

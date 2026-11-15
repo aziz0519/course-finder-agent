@@ -6,6 +6,7 @@ HTTP API, so authorization is enforced server-side exactly as in M4.
 
 from __future__ import annotations
 
+import base64
 import io
 import os
 from collections.abc import Iterable, Mapping
@@ -199,9 +200,16 @@ def _client(state: SessionState | None) -> ApiClient:
     return ApiClient.from_session(state)
 
 
-def _png(payload: bytes) -> Image.Image:
+def _png(payload: bytes) -> str:
+    # Re-encode trusted image pixels and embed them without Gradio's file cache.
     with Image.open(io.BytesIO(payload)) as image:
-        return image.convert("RGB")
+        output = io.BytesIO()
+        image.convert("RGB").save(output, format="PNG")
+    encoded = base64.b64encode(output.getvalue()).decode("ascii")
+    return (
+        f'<img src="data:image/png;base64,{encoded}" alt="Cited source" '
+        'style="max-width:100%;max-height:420px;object-fit:contain">'
+    )
 
 
 def _history(history: Iterable[Any] | None) -> list[dict[str, Any]]:
@@ -362,6 +370,12 @@ def _adviser_detail(
     )
 
 
+def _select_adviser_student(
+    student_id: str | None, state: SessionState | None
+) -> tuple[Any, ...]:
+    return (*_adviser_detail(student_id, state), "", [], "")
+
+
 def _student_plan(cap: float, state: SessionState | None) -> tuple[str, list[list[str]], str]:
     try:
         response = _client(state).plan(unit_cap=int(cap))
@@ -474,8 +488,8 @@ def _show_citation(
     citation = citations[int(index)]
     client = _client(state)
     detail = ""
-    page_image: Image.Image | None = None
-    asset_image: Image.Image | None = None
+    page_image: str | None = None
+    asset_image: str | None = None
     chunk_id = citation.get("chunk_id")
     if chunk_id:
         try:
@@ -494,6 +508,7 @@ def _show_citation(
                 thread_id,
                 citation["document_id"],
                 int(citation["pdf_page_number"]),
+                citation.get("ingestion_version"),
             )
         )
     except (ApiError, KeyError, TypeError, ValueError):
@@ -577,18 +592,8 @@ def build_ui() -> gr.Blocks:
                     )
                     citation_detail = gr.Markdown(CITATION_HINT)
                     with gr.Row():
-                        page_view = gr.Image(
-                            label="Cited PDF page",
-                            type="pil",
-                            interactive=False,
-                            height=420,
-                        )
-                        asset_view = gr.Image(
-                            label="Approved visual",
-                            type="pil",
-                            interactive=False,
-                            height=420,
-                        )
+                        page_view = gr.HTML(label="Cited PDF page")
+                        asset_view = gr.HTML(label="Approved visual")
                 with gr.Tab("My courses"):
                     current_courses = gr.Dataframe(
                         headers=["Course", "Term", "Status"],
@@ -689,6 +694,7 @@ def build_ui() -> gr.Blocks:
                 ingest_button = gr.Button("Validate and ingest", variant="primary")
                 refresh_button = gr.Button("Refresh status", variant="secondary")
             job_output = gr.Markdown()
+            admin_logout = gr.Button("Sign out", variant="secondary")
 
         panels = {
             "welcome": welcome,
@@ -769,6 +775,19 @@ def build_ui() -> gr.Blocks:
                 *panel_outputs,
             ],
         )
+        admin_logout.click(
+            _logout,
+            inputs=[session],
+            outputs=[
+                session,
+                login_col,
+                student_col,
+                adviser_col,
+                admin_col,
+                login_error,
+                *panel_outputs,
+            ],
+        )
 
         send_button.click(
             _send,
@@ -824,9 +843,12 @@ def build_ui() -> gr.Blocks:
             outputs=[plan_summary, plan_table, plan_notes],
         )
         adviser_students.change(
-            _adviser_detail,
+            _select_adviser_student,
             inputs=[adviser_students, session],
-            outputs=[adviser_profile, adviser_progress],
+            outputs=[
+                adviser_profile, adviser_progress,
+                adviser_plan_summary, adviser_plan_table, adviser_plan_notes,
+            ],
         )
         adviser_plan_button.click(
             _adviser_plan,

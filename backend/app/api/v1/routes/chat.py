@@ -239,6 +239,7 @@ def get_cited_page(
     page_number: int,
     principal: PrincipalDep,
     services: ServicesDep,
+    ingestion_version: str | None = None,
 ) -> FileResponse:
     """Serve a rendered page only when the thread already cites that document."""
 
@@ -248,11 +249,19 @@ def get_cited_page(
         citations = _thread_citations(thread_id, principal.user_id, services)
     except PermissionError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND) from exc
-    if not any(item.document_id == document_id for item in citations):
+    citation = next(
+        (item for item in reversed(citations)
+         if item.document_id == document_id
+         and (ingestion_version is None or item.ingestion_version == ingestion_version)),
+        None,
+    )
+    if citation is None or not citation.ingestion_version:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
     scope = services.reading_scope(principal.user_id, student_id)
     try:
-        path = services.retriever.resolve_page(scope, document_id, page_number)
+        path = services.retriever.resolve_page(
+            scope, document_id, page_number, citation.ingestion_version
+        )
     except (PermissionError, ValueError) as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND) from exc
     return FileResponse(

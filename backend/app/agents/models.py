@@ -22,6 +22,7 @@ class Citation(DomainModel):
     document_id: str
     course_code: str
     pdf_page_number: int = Field(ge=1)
+    ingestion_version: str | None = None
     chunk_id: str | None = None
     asset_id: str | None = None
     label: str | None = None

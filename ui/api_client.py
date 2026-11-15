@@ -12,6 +12,7 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass
 from typing import Any
+from urllib.parse import urlencode
 
 import httpx
 
@@ -21,7 +22,7 @@ DEFAULT_TERM = "Spring 2027"
 
 
 class ApiError(Exception):
-    """A non-2xx API response, carrying only the server's public detail."""
+    """An API response or transport failure with a public, safe detail."""
 
     def __init__(self, status_code: int, detail: str):
         self.status_code = status_code
@@ -92,9 +93,22 @@ class ApiClient:
                 client.headers["X-CSRF-Token"] = self._csrf
             yield client
 
+    @staticmethod
+    def _request(
+        client: httpx.Client, method: str, path: str, **kwargs: Any
+    ) -> httpx.Response:
+        try:
+            return client.request(method, path, **kwargs)
+        except httpx.RequestError as exc:
+            raise ApiError(
+                503,
+                "Could not reach the API. Check your connection and API availability. "
+                "If you submitted a change, check its status before trying again.",
+            ) from exc
+
     def _json(self, method: str, path: str, **kwargs: Any) -> Any:
         with self._connection() as client:
-            response = client.request(method, path, **kwargs)
+            response = self._request(client, method, path, **kwargs)
         if response.status_code >= 400:
             raise ApiError(response.status_code, _detail(response))
         if not response.content:
@@ -103,7 +117,7 @@ class ApiClient:
 
     def _bytes(self, path: str) -> bytes:
         with self._connection() as client:
-            response = client.get(path)
+            response = self._request(client, "GET", path)
         if response.status_code >= 400:
             raise ApiError(response.status_code, _detail(response))
         return response.content
@@ -116,8 +130,8 @@ class ApiClient:
             timeout=self._timeout,
             transport=self.transport,
         ) as client:
-            response = client.post(
-                "/api/v1/auth/login",
+            response = self._request(
+                client, "POST", "/api/v1/auth/login",
                 json={"username": username, "password": password},
             )
             if response.status_code >= 400:
@@ -192,10 +206,16 @@ class ApiClient:
             f"/api/v1/chat/sessions/{thread_id}/assets/{asset_id}"
         )
 
-    def page_bytes(self, thread_id: str, document_id: str, page_number: int) -> bytes:
+    def page_bytes(
+        self, thread_id: str, document_id: str, page_number: int,
+        ingestion_version: str | None = None,
+    ) -> bytes:
+        query = (
+            "?" + urlencode({"ingestion_version": ingestion_version}) if ingestion_version else ""
+        )
         return self._bytes(
             f"/api/v1/chat/sessions/{thread_id}/documents/{document_id}"
-            f"/pages/{page_number}"
+            f"/pages/{page_number}{query}"
         )
 
     # --- adviser ----------------------------------------------------------------

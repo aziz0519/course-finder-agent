@@ -296,6 +296,7 @@ class LocalRetriever:
         scope: ReadingScope,
         document_id: str,
         page_number: int,
+        ingestion_version: str,
     ) -> Path:
         """Resolve one rendered page image for citation display.
 
@@ -309,6 +310,8 @@ class LocalRetriever:
         if active is None:
             raise PermissionError("reading is not active for this scope")
         reading, root = active
+        if reading.ingestion_version != ingestion_version:
+            raise PermissionError("cited reading version is no longer active")
         page = next(
             (item for item in reading.pages if item.pdf_page_number == page_number),
             None,
