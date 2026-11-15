@@ -4,9 +4,14 @@ from __future__ import annotations
 
 from fastapi import APIRouter
 
-from app.api.v1.dependencies import ServicesDep, StudentDep
+from app.api.v1.dependencies import PrincipalDep, ServicesDep, StudentDep
 from app.domain.degree_progress import calculate_degree_progress
 from app.domain.models import Student
+from app.schemas.materials import (
+    CourseMaterialResponse,
+    ReadingMaterialResponse,
+    StudentMaterialsResponse,
+)
 from app.schemas.student import (
     CourseRecordResponse,
     DegreeProgressResponse,
@@ -65,3 +70,57 @@ def get_own_profile(student: StudentDep) -> StudentProfile:
 @router.get("/me/progress", response_model=DegreeProgressResponse)
 def get_own_progress(student: StudentDep, services: ServicesDep) -> DegreeProgressResponse:
     return degree_progress(student, services)
+
+
+@router.get("/me/materials", response_model=StudentMaterialsResponse)
+def get_own_materials(
+    student: StudentDep,
+    principal: PrincipalDep,
+    services: ServicesDep,
+) -> StudentMaterialsResponse:
+    """Current-term readings with ingestion and review state, never passage text."""
+
+    dataset = services.dataset()
+    scope = services.reading_scope(principal.user_id, student.student_id)
+    active = {item.document_id: item for item in services.retriever.documents(scope)}
+    courses = tuple(
+        CourseMaterialResponse(
+            course_code=record.course_id,
+            title=course.title,
+            units=course.units,
+            term=record.term.label,
+            readings=tuple(
+                ReadingMaterialResponse(
+                    document_id=document.document_id,
+                    title=document.title,
+                    page_count=(
+                        active[document.document_id].page_count
+                        if document.document_id in active
+                        else document.page_count
+                    ),
+                    ingestion_version=(
+                        active[document.document_id].ingestion_version
+                        if document.document_id in active
+                        else None
+                    ),
+                    ingested=document.document_id in active,
+                    approved_assets=(
+                        active[document.document_id].approved_assets
+                        if document.document_id in active
+                        else 0
+                    ),
+                    total_assets=(
+                        active[document.document_id].total_assets
+                        if document.document_id in active
+                        else 0
+                    ),
+                    week=document.week,
+                )
+                for document in dataset.catalog.reading_documents
+                if document.course_id == record.course_id
+            ),
+        )
+        for record in student.current_courses
+        for course in (dataset.catalog.course(record.course_id),)
+    )
+    return StudentMaterialsResponse(student_id=student.student_id, courses=courses)

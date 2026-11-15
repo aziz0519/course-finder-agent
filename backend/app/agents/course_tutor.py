@@ -41,6 +41,7 @@ def _citation(evidence: Evidence) -> Citation:
         course_code=evidence.course_code,
         pdf_page_number=evidence.page_number,
         chunk_id=evidence.chunk_id,
+        ingestion_version=evidence.ingestion_version,
     )
 
 
@@ -259,6 +260,7 @@ def tutor(
             course_code=course_id,
             pdf_page_number=asset.pdf_page_number,
             asset_id=asset.asset_id,
+            ingestion_version=asset.ingestion_version,
             label=asset.label,
         )
         label = f", {asset.label}" if asset.label else ""

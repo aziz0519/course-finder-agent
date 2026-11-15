@@ -230,3 +230,44 @@ def get_visual_asset(
         content_disposition_type="inline",
         headers={"Cache-Control": "private, no-store"},
     )
+
+
+@router.get("/{thread_id}/documents/{document_id}/pages/{page_number}")
+def get_cited_page(
+    thread_id: str,
+    document_id: str,
+    page_number: int,
+    principal: PrincipalDep,
+    services: ServicesDep,
+    ingestion_version: str | None = None,
+) -> FileResponse:
+    """Serve a rendered page only when the thread already cites that document."""
+
+    student_id = _student_id(principal)
+    try:
+        _owned_thread(thread_id, principal, services)
+        citations = _thread_citations(thread_id, principal.user_id, services)
+    except PermissionError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND) from exc
+    citation = next(
+        (item for item in reversed(citations)
+         if item.document_id == document_id
+         and (ingestion_version is None or item.ingestion_version == ingestion_version)),
+        None,
+    )
+    if citation is None or not citation.ingestion_version:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+    scope = services.reading_scope(principal.user_id, student_id)
+    try:
+        path = services.retriever.resolve_page(
+            scope, document_id, page_number, citation.ingestion_version
+        )
+    except (PermissionError, ValueError) as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND) from exc
+    return FileResponse(
+        path,
+        media_type="image/png",
+        filename=f"{document_id}-p{page_number}.png",
+        content_disposition_type="inline",
+        headers={"Cache-Control": "private, no-store"},
+    )

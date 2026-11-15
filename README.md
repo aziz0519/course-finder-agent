@@ -17,13 +17,15 @@ assistant says so instead of guessing.
 | **M2** | Reading ingestion and course-scoped retrieval with page citations | **implemented** — visual QA remains gated |
 | **M3** | Conversation state, supervisor routing, tutor and planner | ✅ **complete** (2026-11-14) |
 | **M4** | Local API, local auth, RBAC and HTTP acceptance tests | ✅ **implemented** (local demo scope) |
-| M5 | UI (Gradio over the API is the recommendation; Next.js remains supported) | |
+| **M5** | Gradio UI over the API (student, adviser, admin) | ✅ **implemented** (local demo scope) |
 | M6 | Deployable demo (container + single CDK stack) | |
 | M7 | Acceptance run, quality baseline, documentation | |
 
-**Current repository verification:** Ruff passes, mypy passes across **81 source files**,
-**215 tests pass**, and strict fixture validation reports **62 passed, 0 warnings, 0
+**Current repository verification:** Ruff passes, mypy passes across **91 source files**,
+**262 tests pass**, and strict fixture validation reports **62 passed, 0 warnings, 0
 errors, 0 pending**. OpenAI is tested with a mocked transport; no live API key was used.
+The Gradio app is tested at the controller level and builds headlessly; no browser
+automation or live model call is included.
 
 ## M0 exit gate — confirmed
 
@@ -253,11 +255,46 @@ Cognito authentication and `/auth/callback` remain a future integration seam and
 not tested or part of this local M4 demo gate. The API intentionally does not claim
 production identity support.
 
+## M5 — Gradio interface
+
+M5 adds a local Gradio interface over the authenticated API. It holds only the opaque
+session cookie and CSRF token per browser session; every screen action calls the HTTP
+API, so student/adviser/admin authorization is still enforced server-side.
+
+- **Student:** chat with structured citations, cited PDF-page preview, approved visual
+  crop, current courses with reading/review status, degree progress, and a Spring 2027
+  planner with a request-specific unit cap.
+- **Adviser:** assigned-student selector populated from adviser assignments, read-only
+  progress, and a plan for the selected student. Chat is student-only.
+- **Admin:** dataset validation/ingestion trigger and job status.
+
+Start the API, then the UI:
+
+```bash
+uv run uvicorn app.main:app --app-dir backend --reload
+uv run python -m ui.app
+```
+
+The UI reads `COURSE_FINDER_API_URL` (default `http://127.0.0.1:8000`) and serves at
+`http://127.0.0.1:7860`. Sign in with the same `LOCAL_DEV_PASSWORD` used for the API.
+The interface is white with navy `#001E60` headings and structure, and red `#DA291C`
+primary buttons, sliders, and selected-tab accents.
+
+Citation preview is deliberately narrow: the page render is available only for a
+document already cited in that conversation, only for pages not classified as
+restricted, and visual crops only when the asset is approved. Unavailable evidence
+produces an explicit note instead of an image or invented claim.
+
+See [`docs/M5_UI.md`](docs/M5_UI.md) for the demo script, role walkthrough, safety
+behavior, and test coverage.
+
+The frontend decision is now resolved in favour of Gradio for the local demo; the API
+contract remains framework-neutral if a later milestone replaces it with Next.js.
+
 ## Open decisions
 
 | Decision | Recommendation | Impact if deferred |
 |---|---|---|
-| Frontend: Gradio vs Next.js | Gradio over the FastAPI boundary (~1–2 days, swappable later) | Blocks M5 only |
 | Infrastructure tier | Local-first now; single cheap stack (~$50/mo) after acceptance | Blocks M6 only |
 
 See [`docs/decisions/0001-mvp-stack.md`](docs/decisions/0001-mvp-stack.md) and
@@ -269,9 +306,13 @@ See [`docs/decisions/0001-mvp-stack.md`](docs/decisions/0001-mvp-stack.md) and
   visual assets are exposed. Remaining assets stay `needs_review`; formula-heavy pages
   conservatively withhold overlapping prose pending finer extraction.
 - The two nuclear-system readings are entirely withheld from student retrieval pending
-  a reviewed safe-excerpt set. Full PDFs/page renders are administrator-only artifacts.
+  a reviewed safe-excerpt set. Full source PDFs remain admin-only; the UI can show a
+  rendered page only when that document is already cited and the page is not restricted.
 - Local M4 constructs retrieval scope from the authenticated local principal and
   authoritative student record. Cognito/production identity is not implemented or tested.
+- M5 is a single-user-scale demo: Gradio session state is in memory, local sessions end
+  on API restart, ingestion jobs are in-process, and adviser chat is intentionally
+  unavailable. The reader shows rendered page images rather than a scrollable PDF.
 - Degree progress is only as reliable as the supplied requirements JSON.
 - No seats, timetable, instructor, or grade data exists in the fixtures and none will be
   invented.

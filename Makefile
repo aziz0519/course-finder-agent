@@ -1,7 +1,7 @@
 .DEFAULT_GOAL := help
 PY := uv run python
 
-.PHONY: help sync validate validate-strict ingest test lint fmt typecheck check clean
+.PHONY: help sync validate validate-strict ingest test lint fmt typecheck check ui clean
 
 help:  ## Show available targets
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-16s\033[0m %s\n", $$1, $$2}'
@@ -32,6 +32,9 @@ typecheck:  ## Static type check
 	uv run mypy
 
 check: lint typecheck test  ## Everything CI will run
+
+ui:  ## Run the Gradio UI (start the API first)
+	uv run python -m ui.app
 
 clean:  ## Remove local caches and derived artefacts
 	rm -rf .pytest_cache .mypy_cache .ruff_cache .coverage htmlcov
