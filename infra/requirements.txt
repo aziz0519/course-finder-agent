@@ -1,0 +1,4 @@
+# Optional pip-based install; the canonical dependency declaration is the `infra`
+# group in pyproject.toml and uv.lock.
+aws-cdk-lib>=2.180,<3
+constructs>=10,<11

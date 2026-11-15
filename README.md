@@ -18,11 +18,11 @@ assistant says so instead of guessing.
 | **M3** | Conversation state, supervisor routing, tutor and planner | ✅ **complete** (2026-11-14) |
 | **M4** | Local API, local auth, RBAC and HTTP acceptance tests | ✅ **implemented** (local demo scope) |
 | **M5** | Gradio UI over the API (student, adviser, admin) | ✅ **implemented** (local demo scope) |
-| M6 | Deployable demo (container + single CDK stack) | |
+| **M6 P0** | AWS CDK v2 target architecture and offline assertions | ✅ **synth-only implemented** — no bootstrap, deploy, or AWS validation |
 | M7 | Acceptance run, quality baseline, documentation | |
 
-**Current repository verification:** Ruff passes, mypy passes across **91 source files**,
-**262 tests pass**, and strict fixture validation reports **62 passed, 0 warnings, 0
+**Current repository verification:** Ruff passes, mypy passes across **98 source files**,
+**285 tests pass**, and strict fixture validation reports **62 passed, 0 warnings, 0
 errors, 0 pending**. OpenAI is tested with a mocked transport; no live API key was used.
 The Gradio app is tested at the controller level and builds headlessly; no browser
 automation or live model call is included.
@@ -46,8 +46,9 @@ in the M2 section.
 | Quality gates green | `ruff` clean, `mypy` clean (14 files), `pytest` 17 passed | ✅ |
 | Dataset report | `validate_datasets.py` → 61 passed, 0 warnings, 0 errors, 0 pending; `--require-complete` exits `0` | ✅ |
 
-M0 deliberately stops at the data boundary. It contains **no** prerequisite engine, no
-PDF ingestion, no API, and no cloud resources — those are M1–M6.
+M0 deliberately stops at the data boundary. It contains **no** prerequisite engine, PDF
+ingestion, API, or provisioned cloud resources. M6 defines infrastructure templates,
+but provisioning remains outside this synth-only milestone.
 
 ## Quick start
 
@@ -295,7 +296,7 @@ contract remains framework-neutral if a later milestone replaces it with Next.js
 
 | Decision | Recommendation | Impact if deferred |
 |---|---|---|
-| Infrastructure tier | Local-first now; single cheap stack (~$50/mo) after acceptance | Blocks M6 only |
+| Infrastructure deployment tier | Local-first; tier-1 demo is documented (~$50/mo) | Blocks any future AWS deployment, not M6 P0 synthesis |
 
 See [`docs/decisions/0001-mvp-stack.md`](docs/decisions/0001-mvp-stack.md) and
 [`infra/README.md`](infra/README.md).
