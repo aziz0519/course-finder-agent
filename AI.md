@@ -12,71 +12,50 @@ The sample scenario treats **Fall 2026** as the current term and
 maximum of **16 units per term** and states that a course in progress in
 Fall 2026 counts toward prerequisites for courses in the following term.
 
-The MVP uses a lightweight **Gradio UI**, a modular Python backend,
-**LangGraph** for orchestration, **Amazon Bedrock** for model inference,
-PostgreSQL/pgvector for structured and retrieval data, and S3 for source
-documents and visual assets. Agents are logical responsibility
-boundaries; they do not need to be independently deployed services in
-the MVP.
+<!-- coderabbit-ai-generated:v1 -->
+
+<!-- coderabbit-ai-generated-section:v1:42f66e6f17822c4b1cb27a4bffaaf0d6a62ecae793e700f410719e29b7207d47 -->
+
+The current MVP uses a lightweight **Gradio UI** and a modular Python
+backend with deterministic regex-based intent routing to specialist
+functions. **LangGraph** orchestration and **Amazon Bedrock** model
+inference are target architecture components; neither is currently
+implemented or declared as a dependency. PostgreSQL/pgvector for structured
+and retrieval data and S3 for source documents and visual assets are also
+target components. Agents are logical responsibility boundaries; they do
+not need to be independently deployed services in the MVP.
+
+<!-- /coderabbit-ai-generated:v1 -->
 
 The assistant provides advice, not official registration or changes to
 academic records.
 
-## 2. Components and agent boundaries
+<!-- coderabbit-ai-generated:v1 -->
 
-  -----------------------------------------------------------------------
-  Component               Responsibility          Boundary
-  ----------------------- ----------------------- -----------------------
-  Gradio UI               Collect user messages   Presentation only; not
-                          and display answers,    an authorization
-                          citations, and          boundary
-                          recommendations         
+<!-- coderabbit-ai-generated-section:v1:54e7c68e3d4ac8fe873067038779e85d0926c85f0c20562acc2e9cea21ee1681 -->
 
-  Application API         Validate requests,      Enforces access before
-                          establish trusted       sensitive data reaches
-                          identity context,       an agent
-                          invoke workflows,       
-                          return responses        
+## 2. Target components and agent boundaries
 
-  Authentication / RBAC   Authenticate the user   Deterministic; never
-  guard                   and authorize role and  delegated to an LLM
-                          record-level scope      
+<!-- /coderabbit-ai-generated:v1 -->
 
-  LangGraph Supervisor    Classify intent, route  Does not independently
-                          to a specialist,        invent academic rules
-                          coordinate results      
+<!-- coderabbit-ai-generated:v1 -->
 
-  Student Context         Retrieve the authorized Returns only data
-  service/agent           student's programme,    permitted by the
-                          completions,            authorization context
-                          enrolments, and adviser 
-                          relationship            
+<!-- coderabbit-ai-generated-section:v1:79c6a0f6b890634b50d8fd35ebcb510374c525d2afd79c607b3a92f8960a78e8 -->
 
-  Course Tutor agent      Answer questions        Must use retrieved
-                          grounded in course      evidence and citations;
-                          readings                must disclose
-                                                  insufficient evidence
+| Component | Responsibility | Boundary |
+| --- | --- | --- |
+| Gradio UI | Collect user messages and display answers, citations, and recommendations | Presentation only; not an authorization boundary |
+| Application API | Validate requests, establish trusted identity context, invoke workflows, return responses | Enforces access before sensitive data reaches an agent |
+| Authentication / RBAC guard | Authenticate the user and authorize role and record-level scope | Deterministic; never delegated to an LLM |
+| LangGraph Supervisor | Classify intent, route to a specialist, coordinate results | Does not independently invent academic rules |
+| Student Context service/agent | Retrieve the authorized student's programme, completions, enrolments, and adviser relationship | Returns only data permitted by the authorization context |
+| Course Tutor agent | Answer questions grounded in course readings | Must use retrieved evidence and citations; must disclose insufficient evidence |
+| Academic Planning agent | Explain degree progress and propose next-term course combinations | Uses deterministic domain services for eligibility and unit calculations |
+| Academic Rules Engine | Evaluate prerequisites, terms offered, degree requirements, and unit limits | Authoritative for calculations; no LLM-based eligibility decisions |
+| Retrieval service | Search extracted reading chunks and associated visual evidence | Returns source metadata and evidence references |
+| Conversation state store | Preserve history, preferences, and source references between turns | Context only; not an authoritative academic record |
 
-  Academic Planning agent Explain degree progress Uses deterministic
-                          and propose next-term   domain services for
-                          course combinations     eligibility and unit
-                                                  calculations
-
-  Academic Rules Engine   Evaluate prerequisites, Authoritative for
-                          terms offered, degree   calculations; no
-                          requirements, and unit  LLM-based eligibility
-                          limits                  decisions
-
-  Retrieval service       Search extracted        Returns source metadata
-                          reading chunks and      and evidence references
-                          associated visual       
-                          evidence                
-
-  Conversation state      Preserve history,       Context only; not an
-  store                   preferences, and source authoritative academic
-                          references between      record
-                          turns                   
-  -----------------------------------------------------------------------
+<!-- /coderabbit-ai-generated:v1 -->
 
 ### Boundary principles
 
@@ -92,7 +71,13 @@ academic records.
 -   If the supplied data cannot answer a question, the assistant says so
     rather than guessing.
 
-## 3. Runtime system overview
+<!-- coderabbit-ai-generated:v1 -->
+
+<!-- coderabbit-ai-generated-section:v1:a17d2a94db4528369848d76f6532b675f282561d766ca9fd83b7b6c7cb3d232e -->
+
+## 3. Target runtime system overview
+
+<!-- /coderabbit-ai-generated:v1 -->
 
 ``` mermaid
 flowchart TD
@@ -132,6 +117,10 @@ interactive requests.
 
 ## 4. First message to response
 
+<!-- coderabbit-ai-generated:v1 -->
+
+<!-- coderabbit-ai-generated-section:v1:97c4e79f3043d6f756d80da9ec8f2755a38728014d36d2c99d038e78295fcb70 -->
+
 1.  **Message submission:** The student submits a question in Gradio.
     The request includes the message, conversation ID when continuing a
     conversation, and session credential.
@@ -142,10 +131,15 @@ interactive requests.
     permitted student-record scope. A student can access their own
     record; an adviser must be checked against adviser assignments;
     administrative ingestion requires an administrator role.
-4.  **Conversation loading:** For an existing conversation, load
-    relevant messages, active course/reading references, figure/page
-    references, planning term, and user preferences such as a requested
-    unit cap.
+4.  **Conversation loading:** Before loading an existing conversation's
+    messages or references, verify that the authenticated user is authorized
+    to access that conversation. Check student ownership and recheck its
+    current authorized student-record scope, including any changes to
+    adviser assignments or access. If the check fails, deny access and do
+    not load history or references. Only after it succeeds, load relevant
+    messages, active course/reading references, figure/page references,
+    planning term, and user preferences such as a requested unit cap.
+
 5.  **Intent classification:** The Supervisor classifies the request and
     routes it to the Tutor, Planner, or a clarification/unsupported
     path.
@@ -157,6 +151,8 @@ interactive requests.
 8.  **Persistence and response:** Store the new turn and relevant
     references in conversation state, then return a structured response
     to Gradio.
+
+<!-- /coderabbit-ai-generated:v1 -->
 
 Re-check authorization on every turn. Conversation history does not
 grant access to data.
@@ -396,35 +392,24 @@ advanced.
 
 ## 8. Failure handling
 
-  -----------------------------------------------------------------------
-  Condition                           Expected behaviour
-  ----------------------------------- -----------------------------------
-  Invalid/expired session             Require re-authentication
+<!-- coderabbit-ai-generated:v1 -->
 
-  Student requests another student's  Deny before retrieval
-  record                              
+<!-- coderabbit-ai-generated-section:v1:9097e06251eb63755ca3fd30155e7b34731b0778b8d4d1d6d3bcebc1eb76df0d -->
 
-  No matching reading                 State that supplied material does
-                                      not answer the question
+| Condition | Expected behaviour |
+| --- | --- |
+| Invalid/expired session | Require re-authentication |
+| Student requests another student's record | Deny before retrieval |
+| No matching reading | State that supplied material does not answer the question |
+| Diagram cannot be verified | State limitation; do not guess |
+| Missing/inconsistent student data | Identify missing data; avoid definitive recommendation |
+| Prerequisite not met | Exclude course and explain why |
+| Requested cap exceeds institutional maximum | Apply maximum and explain constraint |
+| No feasible plan under cap | Explain conflict and request a revised constraint |
+| Model/retrieval unavailable | Return controlled error, not fabricated content |
+| Tool failure | Bounded retry and record failure |
 
-  Diagram cannot be verified          State limitation; do not guess
-
-  Missing/inconsistent student data   Identify missing data; avoid
-                                      definitive recommendation
-
-  Prerequisite not met                Exclude course and explain why
-
-  Requested cap exceeds institutional Apply maximum and explain
-  maximum                             constraint
-
-  No feasible plan under cap          Explain conflict and request a
-                                      revised constraint
-
-  Model/retrieval unavailable         Return controlled error, not
-                                      fabricated content
-
-  Tool failure                        Bounded retry and record failure
-  -----------------------------------------------------------------------
+<!-- /coderabbit-ai-generated:v1 -->
 
 ## 9. Guardrails and security
 
@@ -449,11 +434,18 @@ facilitate construction or optimisation of a weapon.
 
 ## 10. MVP to production
 
-**MVP** - Gradio UI and one modular Python backend. - LangGraph
-Supervisor and logically specialised agents. - Bedrock model
-inference. - PostgreSQL with pgvector. - S3 for original PDFs and
+<!-- coderabbit-ai-generated:v1 -->
+
+<!-- coderabbit-ai-generated-section:v1:2ef600e3f4956178d5b7c636b9f7d6a0ec5e8f09241b274c1f9fb2a1c8d52450 -->
+
+**MVP** - Gradio UI and one modular Python backend with deterministic
+regex-based intent routing and logically specialised agents. - LangGraph
+Supervisor and Bedrock model inference remain target components; neither
+is currently implemented or declared as a dependency. - PostgreSQL with pgvector. - S3 for original PDFs and
 processed visual assets. - Basic authentication and RBAC. - Separate
 ingestion worker where practical. - AWS CDK v2 provisioning.
+
+<!-- /coderabbit-ai-generated:v1 -->
 
 **Production evolution** - Integrate the institution's portal, SSO, and
 authoritative SIS/LMS APIs. - Scale interactive APIs and ingestion
@@ -467,24 +459,18 @@ runtime options if operational needs justify them.
 
 ## 11. Acceptance tests
 
-  -----------------------------------------------------------------------
-  Test                                Required behaviour
-  ----------------------------------- -----------------------------------
-  "How does the Bohr model explain    Retrieve PHYS 350 reading and
-  the lines in the hydrogen           return grounded explanation with
-  spectrum?"                          citations
+<!-- coderabbit-ai-generated:v1 -->
 
-  "According to the diagram in that   Resolve prior reading and verify
-  reading, how many electrons can the answer against actual diagram
-  second energy level hold?"          
+<!-- coderabbit-ai-generated-section:v1:6fc6a2c4d3884e8c155504ddd910ce295f02d79753c17951be361a3cd5dcfc77 -->
 
-  "What should I take in Spring 2027  Produce a feasible plan within 12
-  to progress my degree? Keep it to   units using student-001 and
-  12 units."                          supplied policies
+| Test | Required behaviour |
+| --- | --- |
+| "How does the Bohr model explain the lines in the hydrogen spectrum?" | Retrieve PHYS 350 reading and return grounded explanation with citations |
+| "According to the diagram in that reading, how many electrons can the second energy level hold?" | Resolve prior reading and verify answer against actual diagram |
+| "What should I take in Spring 2027 to progress my degree? Keep it to 12 units." | Produce a feasible plan within 12 units using student-001 and supplied policies |
+| "I have accepted a part-time internship, so cap me at 8 units." | Preserve term/student context, update cap, and recompute plan |
 
-  "I have accepted a part-time        Preserve term/student context,
-  internship, so cap me at 8 units."  update cap, and recompute plan
-  -----------------------------------------------------------------------
+<!-- /coderabbit-ai-generated:v1 -->
 
 Tests must validate evidence, calculations, authorization, and persisted
 follow-up state, not just response wording.

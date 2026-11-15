@@ -26,31 +26,18 @@ are not authoritative academic records.
 
 ## 2. Source datasets
 
-  ------------------------------------------------------------------------
-  Dataset           Format            Use                MVP source of
-                                                         truth
-  ----------------- ----------------- ------------------ -----------------
-  Course readings   PDF               Grounded course    Original PDF in
-                                      tutoring           S3
+<!-- coderabbit-ai-generated:v1 -->
 
-  Course catalogue  JSON              Course details,    Validated
-                                      units,             relational
-                                      prerequisites,     representation
-                                      terms              plus retained
-                                                         source JSON
+<!-- coderabbit-ai-generated-section:v1:ebd0c39fe2302811c1f70eb19de747c45973c1704983ada980166138c2d7faca -->
 
-  Degree            JSON section of   Degree progress    Validated
-  requirements      catalogue         and elective/core  relational
-                                      rules              representation
-                                                         plus retained
-                                                         source JSON
+| Dataset | Format | Use | MVP source of truth |
+| --- | --- | --- | --- |
+| Course readings | PDF | Grounded course tutoring | Original PDF in S3 |
+| Course catalogue | JSON | Course details, units, prerequisites, terms | Validated relational representation plus retained source JSON |
+| Degree requirements | JSON section of catalogue | Degree progress and elective/core rules | Validated relational representation plus retained source JSON |
+| Student records | JSON | Student-specific planning | Validated relational representation plus retained source JSON |
 
-  Student records   JSON              Student-specific   Validated
-                                      planning           relational
-                                                         representation
-                                                         plus retained
-                                                         source JSON
-  ------------------------------------------------------------------------
+<!-- /coderabbit-ai-generated:v1 -->
 
 The supplied files are authoritative inputs for the MVP. In production,
 SIS, catalogue, and degree-audit systems may be authoritative, but their
@@ -270,37 +257,27 @@ splitting.
 
 Recommended chunk metadata:
 
-  -----------------------------------------------------------------------
-  Field                               Purpose
-  ----------------------------------- -----------------------------------
-  `chunk_id`                          Stable unique chunk ID
+<!-- coderabbit-ai-generated:v1 -->
 
-  `document_id`                       Source reading
+<!-- coderabbit-ai-generated-section:v1:6aa6b08e06bac4ea4fac6bbc95901c5195a6db4d356109f0a404ef3c434cee82 -->
 
-  `course_code`                       Course association
+| Field | Purpose |
+| --- | --- |
+| `chunk_id` | Stable unique chunk ID |
+| `document_id` | Source reading |
+| `course_code` | Course association |
+| `title` | Reading title |
+| `page_start`, `page_end` | Original PDF page range |
+| `section_path` | Heading hierarchy |
+| `content_type` | `text`, `table`, `figure_caption`, `equation`, `visual_description` |
+| `text` | Searchable text |
+| `asset_ids` | Related page renders or figure crops |
+| `source_version` | Original PDF version |
+| `parser_version` | Extraction pipeline version |
+| `embedding_model` | Embedding model identifier |
+| `quality_status` | Validation status |
 
-  `title`                             Reading title
-
-  `page_start`, `page_end`            Original PDF page range
-
-  `section_path`                      Heading hierarchy
-
-  `content_type`                      `text`, `table`, `figure_caption`,
-                                      `equation`, `visual_description`
-
-  `text`                              Searchable text
-
-  `asset_ids`                         Related page renders or figure
-                                      crops
-
-  `source_version`                    Original PDF version
-
-  `parser_version`                    Extraction pipeline version
-
-  `embedding_model`                   Embedding model identifier
-
-  `quality_status`                    Validation status
-  -----------------------------------------------------------------------
+<!-- /coderabbit-ai-generated:v1 -->
 
 Metadata supports filtering by course, reading, page, and content type,
 as well as citation generation and retrieval improvements.
@@ -374,38 +351,25 @@ rules.
 
 A practical PostgreSQL model:
 
-  -----------------------------------------------------------------------
-  Table                               Purpose
-  ----------------------------------- -----------------------------------
-  `programs`                          Programme IDs and names
+<!-- coderabbit-ai-generated:v1 -->
 
-  `program_requirements`              Requirement name, rule, required
-                                      count
+<!-- coderabbit-ai-generated-section:v1:2b46fcb8295739b28b033af8590b93feced08d5f5f9208b0f2c0ec267462cafe -->
 
-  `requirement_courses`               Courses associated with each
-                                      requirement
+| Table | Purpose |
+| --- | --- |
+| `programs` | Programme IDs and names |
+| `program_requirements` | Requirement name, rule, required count |
+| `requirement_courses` | Courses associated with each requirement |
+| `courses` | Course code, title, units, description |
+| `course_prerequisites` | Course-to-prerequisite relationships |
+| `course_terms` | Terms in which a course is offered |
+| `course_materials` | Course, reading title, week, document ID |
+| `students` | Student ID, academic level, programme, adviser |
+| `student_course_history` | Student, course, term, status |
+| `adviser_assignments` | Student/adviser relationship |
+| `ingestion_jobs` | Job ID, source key, status, error summary, timestamps |
 
-  `courses`                           Course code, title, units,
-                                      description
-
-  `course_prerequisites`              Course-to-prerequisite
-                                      relationships
-
-  `course_terms`                      Terms in which a course is offered
-
-  `course_materials`                  Course, reading title, week,
-                                      document ID
-
-  `students`                          Student ID, academic level,
-                                      programme, adviser
-
-  `student_course_history`            Student, course, term, status
-
-  `adviser_assignments`               Student/adviser relationship
-
-  `ingestion_jobs`                    Job ID, source key, status, error
-                                      summary, timestamps
-  -----------------------------------------------------------------------
+<!-- /coderabbit-ai-generated:v1 -->
 
 Use foreign keys and unique constraints. Preserve source JSON and
 checksums to trace structured records back to the input fixture.
@@ -497,44 +461,25 @@ institution.
 
 ## 10. AWS deployment mapping
 
-  -----------------------------------------------------------------------
-  Capability              Proposed MVP AWS        Notes
-                          component               
-  ----------------------- ----------------------- -----------------------
-  Original and processed  Amazon S3               Private buckets,
-  files                                           encryption, versioning
-                                                  as required
+<!-- coderabbit-ai-generated:v1 -->
 
-  Ingestion queue         Amazon SQS              Decouples upload from
-                                                  processing
+<!-- coderabbit-ai-generated-section:v1:e3b5aedf345019182e605b79af20923bfefe55c2d5763530dcb2119044169db4 -->
 
-  PDF/JSON processing     ECS Fargate worker      Separate from
-                                                  interactive workload
+| Capability | Proposed MVP AWS component | Notes |
+| --- | --- | --- |
+| Original and processed files | Amazon S3 | Private buckets, encryption, versioning as required |
+| Ingestion queue | Amazon SQS | Decouples upload from processing |
+| PDF/JSON processing | ECS Fargate worker | Separate from interactive workload |
+| UI/API | ECS Fargate | Lightweight Gradio MVP |
+| Model inference | Amazon Bedrock | Subject to region, model availability, and institutional approval |
+| Structured academic data | Amazon RDS for PostgreSQL | Relational constraints and transactions |
+| Vector retrieval | pgvector in PostgreSQL | Chunk embeddings and metadata |
+| Authentication | Amazon Cognito for MVP | Institutional SSO integration to be validated |
+| Secrets | Secrets Manager or Systems Manager Parameter Store | No credentials in source control |
+| Observability | Amazon CloudWatch | Logs, metrics, alarms |
+| Infrastructure as code | AWS CDK v2 | Repeatable provisioning |
 
-  UI/API                  ECS Fargate             Lightweight Gradio MVP
-
-  Model inference         Amazon Bedrock          Subject to region,
-                                                  model availability, and
-                                                  institutional approval
-
-  Structured academic     Amazon RDS for          Relational constraints
-  data                    PostgreSQL              and transactions
-
-  Vector retrieval        pgvector in PostgreSQL  Chunk embeddings and
-                                                  metadata
-
-  Authentication          Amazon Cognito for MVP  Institutional SSO
-                                                  integration to be
-                                                  validated
-
-  Secrets                 Secrets Manager or      No credentials in
-                          Systems Manager         source control
-                          Parameter Store         
-
-  Observability           Amazon CloudWatch       Logs, metrics, alarms
-
-  Infrastructure as code  AWS CDK v2              Repeatable provisioning
-  -----------------------------------------------------------------------
+<!-- /coderabbit-ai-generated:v1 -->
 
 This is a proposed mapping, not a claim that the services are already
 deployed. Validate quotas, regional availability, data residency,
@@ -542,50 +487,28 @@ networking, model access, and institutional security requirements.
 
 ## 11. Data acceptance tests
 
-  -----------------------------------------------------------------------
-  Test                                Expected result
-  ----------------------------------- -----------------------------------
-  Catalogue schema                    All 14 courses and programme
-                                      requirements validate
+<!-- coderabbit-ai-generated:v1 -->
 
-  Student schema                      Both student records validate
+<!-- coderabbit-ai-generated-section:v1:628d945792ab0282c56988eac1e6bd7191df8a8474d3e12fffd506692e5a7b05 -->
 
-  Course references                   All completed/enrolled course codes
-                                      resolve
+| Test | Expected result |
+| --- | --- |
+| Catalogue schema | All 14 courses and programme requirements validate |
+| Student schema | Both student records validate |
+| Course references | All completed/enrolled course codes resolve |
+| Programme references | Both programme IDs resolve |
+| Prerequisite references | All prerequisite codes resolve |
+| PDF preflight | Page counts and source metadata recorded for all readings |
+| Visual extraction | Figures, charts, tables, and equations extracted or explicitly flagged |
+| Citation traceability | Every chunk resolves to original document and page |
+| Hybrid retrieval | Course-filtered queries return relevant chunks with metadata |
+| Re-ingestion | Same source does not create duplicates |
+| Changed source | New version supersedes affected derived content |
+| Access isolation | Student cannot retrieve another student's records |
+| Planning correctness | Eligibility and unit totals match deterministic rules |
+| Missing evidence | Application reports insufficient evidence rather than fabricating an answer |
 
-  Programme references                Both programme IDs resolve
-
-  Prerequisite references             All prerequisite codes resolve
-
-  PDF preflight                       Page counts and source metadata
-                                      recorded for all readings
-
-  Visual extraction                   Figures, charts, tables, and
-                                      equations extracted or explicitly
-                                      flagged
-
-  Citation traceability               Every chunk resolves to original
-                                      document and page
-
-  Hybrid retrieval                    Course-filtered queries return
-                                      relevant chunks with metadata
-
-  Re-ingestion                        Same source does not create
-                                      duplicates
-
-  Changed source                      New version supersedes affected
-                                      derived content
-
-  Access isolation                    Student cannot retrieve another
-                                      student's records
-
-  Planning correctness                Eligibility and unit totals match
-                                      deterministic rules
-
-  Missing evidence                    Application reports insufficient
-                                      evidence rather than fabricating an
-                                      answer
-  -----------------------------------------------------------------------
+<!-- /coderabbit-ai-generated:v1 -->
 
 ## 12. MVP delivery sequence
 
