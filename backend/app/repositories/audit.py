@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import sqlite3
+from contextlib import closing
 from datetime import UTC, datetime
 from pathlib import Path
 from threading import RLock
@@ -17,7 +18,7 @@ class AuditRepository:
         self.database = database.resolve()
         self.database.parent.mkdir(parents=True, exist_ok=True)
         self._lock = RLock()
-        with self._connect() as db:
+        with closing(self._connect()) as db, db:
             db.execute(
                 """
                 CREATE TABLE IF NOT EXISTS audit_events (
@@ -48,7 +49,7 @@ class AuditRepository:
         outcome: str,
         metadata: dict[str, str],
     ) -> None:
-        with self._lock, self._connect() as db:
+        with self._lock, closing(self._connect()) as db, db:
             db.execute(
                 "INSERT INTO audit_events VALUES (?,?,?,?,?,?,?,?)",
                 (
@@ -66,7 +67,7 @@ class AuditRepository:
     def events(self) -> tuple[dict[str, object], ...]:
         """Expose records to tests/operators; never includes request payloads."""
 
-        with self._connect() as db:
+        with closing(self._connect()) as db, db:
             rows = db.execute(
                 "SELECT * FROM audit_events ORDER BY created_at,event_id"
             ).fetchall()

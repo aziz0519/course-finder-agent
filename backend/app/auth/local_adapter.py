@@ -105,10 +105,8 @@ class LocalAuthService:
 
             principal = self._principals.get(username)
             credential_hash = self._credential_hashes.get(username, self._dummy_hash)
-            if (
-                principal is None
-                or not self._password_hash.verify(password, credential_hash)
-            ):
+            verified = self._password_hash.verify(password, credential_hash)
+            if principal is None or not verified:
                 failures.append(now)
                 raise ValueError("invalid credentials")
 

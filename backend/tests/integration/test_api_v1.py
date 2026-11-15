@@ -227,6 +227,11 @@ def test_logout_revokes_session_and_login_is_rate_limited(api_client: TestClient
         headers={"X-CSRF-Token": csrf},
     )
     assert logout.status_code == 200
+    audit = cast(FastAPI, api_client.app).state.services.audit
+    event = audit.events()[-1]
+    assert event["action"] == "POST /auth/logout"
+    assert event["actor_user_id"] == "user-student-001"
+    assert event["actor_role"] == "student"
     assert api_client.get("/api/v1/auth/me").status_code == 401
 
     client = TestClient(api_client.app)
@@ -328,3 +333,86 @@ def test_bohr_conversation_and_owner_scoped_citations(api_client: TestClient) ->
         ).status_code
         == 404
     )
+
+
+def test_unknown_username_verifies_dummy_hash(
+    api_client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    auth = cast(FastAPI, api_client.app).state.services.auth
+    hashes: list[str] = []
+
+    def verify(password: str, credential_hash: str) -> bool:
+        hashes.append(credential_hash)
+        return True
+
+    monkeypatch.setattr(auth._password_hash, "verify", verify)
+    response = api_client.post(
+        "/api/v1/auth/login",
+        json={"username": "unknown", "password": "wrong"},
+    )
+    assert response.status_code == 401
+    assert hashes == [auth._dummy_hash]
+
+
+@pytest.mark.parametrize("student_id", ["student-001", "student-002"])
+def test_conversation_uses_atomic_snapshot(
+    api_client: TestClient, monkeypatch: pytest.MonkeyPatch, student_id: str
+) -> None:
+    csrf = login(api_client, "student-001")
+    created = api_client.post(
+        "/api/v1/chat/sessions", json={}, headers={"X-CSRF-Token": csrf}
+    )
+    thread_id = created.json()["thread_id"]
+    repository = cast(FastAPI, api_client.app).state.services.conversations
+    snapshot = repository.get_with_messages(thread_id, "user-student-001")
+    snapshot = (snapshot[0].model_copy(update={"authorized_student_id": student_id}), snapshot[1])
+    calls = []
+
+    def read_snapshot(thread_id: str, owner_id: str):
+        calls.append((thread_id, owner_id))
+        return snapshot
+
+    def separate_read(*args):
+        pytest.fail("conversation must be read atomically")
+
+    monkeypatch.setattr(repository, "get_with_messages", read_snapshot)
+    monkeypatch.setattr(repository, "get", separate_read)
+    monkeypatch.setattr(repository, "messages", separate_read)
+    response = api_client.get(f"/api/v1/chat/sessions/{thread_id}")
+    assert response.status_code == (200 if student_id == "student-001" else 404)
+    if student_id == "student-001":
+        assert response.json()["revision"] == snapshot[0].revision
+    assert calls == [(thread_id, "user-student-001")]
+
+
+def test_failed_request_is_audited_off_loop_and_preserves_exception(
+    api_client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import asyncio
+
+    application = cast(FastAPI, api_client.app)
+    audit = application.state.services.audit
+    original_record = audit.record
+    failure = RuntimeError("endpoint failed")
+
+    def record(**kwargs):
+        with pytest.raises(RuntimeError, match="no running event loop"):
+            asyncio.get_running_loop()
+        original_record(**kwargs)
+
+    monkeypatch.setattr(audit, "record", record)
+
+    @application.get("/api/v1/test-failure")
+    async def fail():
+        raise failure
+
+    login(api_client, "student-001")
+    with pytest.raises(RuntimeError) as caught:
+        api_client.get("/api/v1/test-failure")
+    assert caught.value is failure
+    event = audit.events()[-1]
+    assert event["action"] == "GET /api/v1/test-failure"
+    assert event["actor_user_id"] == "user-student-001"
+    assert event["actor_role"] == "student"
+    assert event["outcome"] == "denied"
+    assert event["metadata"] == {"http_status": "500"}

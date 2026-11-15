@@ -106,8 +106,11 @@ def get_conversation(
 ) -> ConversationResponse:
     _student_id(principal)
     try:
-        thread = _owned_thread(thread_id, principal, services)
-        messages = services.conversations.messages(thread_id, principal.user_id)
+        thread, messages = services.conversations.get_with_messages(
+            thread_id, principal.user_id
+        )
+        if thread.authorized_student_id != principal.student_id:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
     except PermissionError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND) from exc
     return ConversationResponse(

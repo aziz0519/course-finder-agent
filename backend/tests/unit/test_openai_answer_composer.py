@@ -100,3 +100,31 @@ def test_openai_composer_fails_closed_on_provider_error() -> None:
 
     with pytest.raises(ValueError, match="provider failed"):
         composer.compose("question", (_evidence(),))
+
+
+@pytest.mark.parametrize("evidence_index", [0, 1])
+def test_openai_composer_validates_only_transmitted_evidence(evidence_index: int) -> None:
+    first = _evidence()
+    later = first.model_copy(update={"excerpt": "Omitted evidence.", "chunk_id": "chunk-2"})
+
+    def respond(request: httpx.Request) -> httpx.Response:
+        content = json.loads(request.content)["messages"][1]["content"]
+        assert "<evidence index=0 " in content
+        assert "<evidence index=1 " not in content
+        assert later.excerpt not in content
+        return httpx.Response(
+            200,
+            json={"choices": [{"message": {"content": json.dumps({
+                "claims": [{"text": "A claim.", "evidence_index": evidence_index}]
+            })}}]},
+        )
+
+    composer = OpenAIAnswerComposer(
+        SecretStr("test-secret"), "test-model", transport=httpx.MockTransport(respond)
+    )
+    composer._MAX_EVIDENCE_CHARS = len(first.excerpt) - 1
+    if evidence_index == 1:
+        with pytest.raises(ValueError, match="outside the supplied set"):
+            composer.compose("question", (first, later))
+    else:
+        assert composer.compose("question", (first, later)).claims[0].evidence_index == 0

@@ -62,6 +62,7 @@ class OpenAIAnswerComposer:
         if not evidence:
             raise ValueError("answer composition requires evidence")
         excerpts: list[str] = []
+        included_indices: set[int] = set()
         remaining = self._MAX_EVIDENCE_CHARS
         for index, item in enumerate(evidence):
             excerpt = item.excerpt[:remaining]
@@ -72,6 +73,7 @@ class OpenAIAnswerComposer:
                 f"document={item.document_title!r} page={item.page_number}>\n"
                 f"{excerpt}\n</evidence>"
             )
+            included_indices.add(index)
             remaining -= len(excerpt)
             if remaining <= 0:
                 break
@@ -150,7 +152,7 @@ class OpenAIAnswerComposer:
             answer = ComposedAnswer.model_validate(json.loads(content))
         except (httpx.HTTPError, KeyError, IndexError, TypeError, json.JSONDecodeError) as exc:
             raise ValueError("grounded answer provider failed") from exc
-        if any(claim.evidence_index >= len(evidence) for claim in answer.claims):
+        if any(claim.evidence_index not in included_indices for claim in answer.claims):
             raise ValueError("answer references evidence outside the supplied set")
         return answer
 

@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 
 from fastapi import FastAPI, Request
+from fastapi.concurrency import run_in_threadpool
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -28,24 +29,37 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     class RedactedAuditMiddleware(BaseHTTPMiddleware):
         async def dispatch(self, request: Request, call_next):
-            response = await call_next(request)
-            if request.url.path.startswith("/api/v1/"):
-                services: ApiServices = request.app.state.services
-                principal = services.auth.authenticate(
-                    request.cookies.get("course_finder_session")
-                )
+            if not request.url.path.startswith("/api/v1/"):
+                return await call_next(request)
+            services: ApiServices = request.app.state.services
+            principal = services.auth.authenticate(
+                request.cookies.get("course_finder_session")
+            )
+
+            async def record_outcome(status_code: int) -> None:
                 route = request.scope.get("route")
                 template = getattr(route, "path", "/unknown")
                 segments = template.strip("/").split("/")
                 resource_type = segments[2] if len(segments) > 2 else "api"
-                services.audit.record(
+                await run_in_threadpool(
+                    services.audit.record,
                     actor_user_id=principal.user_id if principal else None,
                     actor_role=principal.role if principal else None,
                     action=f"{request.method} {template}",
                     resource_type=resource_type,
-                    outcome="allowed" if response.status_code < 400 else "denied",
-                    metadata={"http_status": str(response.status_code)},
+                    outcome="allowed" if status_code < 400 else "denied",
+                    metadata={"http_status": str(status_code)},
                 )
+
+            try:
+                response = await call_next(request)
+            except Exception:
+                try:
+                    await record_outcome(500)
+                except Exception:
+                    logging.getLogger("app").exception("Failed to record API audit event")
+                raise
+            await record_outcome(response.status_code)
             return response
 
     application.add_middleware(RedactedAuditMiddleware)
