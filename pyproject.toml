@@ -46,10 +46,11 @@ packages = ["backend/app"]
 [tool.pytest.ini_options]
 testpaths = ["backend/tests", "infra/tests"]
 pythonpath = ["backend", "."]
-addopts = "-q"
+addopts = "-q -m 'not acceptance'"
 markers = [
     "corpus: needs the approved reading PDFs, which are not committed to git",
     "e2e: browser-level test that needs running API/UI containers",
+    "acceptance: end-to-end acceptance scenario run explicitly with pytest -m acceptance",
 ]
 
 [tool.coverage.run]

@@ -1,7 +1,7 @@
 .DEFAULT_GOAL := help
 PY := uv run python
 
-.PHONY: help sync validate validate-strict ingest test lint fmt typecheck check ui infra-synth images e2e-up e2e e2e-down ci-scope clean
+.PHONY: help sync validate validate-strict ingest test acceptance baseline lint fmt typecheck check ui infra-synth images e2e-up e2e e2e-down ci-scope clean
 
 help:  ## Show available targets
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-16s\033[0m %s\n", $$1, $$2}'
@@ -20,6 +20,12 @@ ingest:  ## Ingest all five PDFs with checksum-bound QA and local retrieval acti
 
 test:  ## Run the test suite
 	uv run pytest
+
+acceptance:  ## Run explicit M7 HTTP acceptance tests
+	uv run pytest -m acceptance -q
+
+baseline:  ## Generate the offline M7 quality baseline (requires approved PDFs)
+	$(PY) scripts/run_baseline.py
 
 lint:  ## Lint without modifying files
 	uv run ruff check .
