@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from collections import deque
-
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 
@@ -30,27 +28,43 @@ class RequestBodyLimitMiddleware:
                 await self._reject(send)
                 return
 
-        buffered: deque[Message] = deque()
-        total = 0
+        body = bytearray()
+        disconnected = False
         while True:
             message = await receive()
             if message["type"] == "http.disconnect":
-                buffered.append(message)
+                disconnected = True
                 break
             if message["type"] != "http.request":
-                buffered.append(message)
                 continue
-            total += len(message.get("body", b""))
-            if total > self.max_bytes:
+            chunk = message.get("body", b"")
+            if len(body) + len(chunk) > self.max_bytes:
                 await self._reject(send)
                 return
-            buffered.append(message)
+            body.extend(chunk)
             if not message.get("more_body", False):
                 break
 
+        buffered: Message | None = (
+            {
+                "type": "http.request",
+                "body": bytes(body),
+                "more_body": disconnected,
+            }
+            if body or not disconnected
+            else None
+        )
+
+        del body
+
         async def replay_receive() -> Message:
-            if buffered:
-                return buffered.popleft()
+            nonlocal buffered, disconnected
+            if buffered is not None:
+                message, buffered = buffered, None
+                return message
+            if disconnected:
+                disconnected = False
+                return {"type": "http.disconnect"}
             return await receive()
 
         await self.app(scope, replay_receive, send)

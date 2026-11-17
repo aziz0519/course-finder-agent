@@ -230,6 +230,9 @@ def test_request_body_limit_and_audit_metadata_redaction(api_client: TestClient)
         headers={"Content-Type": "application/json"},
     )
     assert oversized.status_code == 413
+    denial = cast(FastAPI, api_client.app).state.services.audit.events()[-1]
+    assert denial["outcome"] == "denied"
+    assert denial["metadata"] == {"http_status": "413"}
 
     csrf = login(api_client, "student-001")
     response = api_client.post(

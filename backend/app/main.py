@@ -63,8 +63,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             await record_outcome(response.status_code)
             return response
 
-    application.add_middleware(RedactedAuditMiddleware)
     application.add_middleware(RequestBodyLimitMiddleware, max_bytes=1_048_576)
+    application.add_middleware(RedactedAuditMiddleware)
     origins = (
         ["http://localhost:3000", "http://127.0.0.1:3000"]
         if configured.app_env != "production"

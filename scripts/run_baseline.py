@@ -11,6 +11,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import re
 import sys
 import tempfile
 from datetime import UTC, datetime
@@ -42,8 +43,9 @@ PDF_NAMES = (
 )
 
 
-def sha256(path: Path) -> str:
-    return hashlib.sha256(path.read_bytes()).hexdigest()
+def _electron_capacity_matches(text: str, expected_value: int) -> bool:
+    capacities = re.findall(r"\bup to\s+(\d+)\s+electrons\b", text, flags=re.IGNORECASE)
+    return bool(capacities) and all(int(value) == expected_value for value in capacities)
 
 
 def _scope(dataset: AcademicDataset, student_id: str, principal_id: str) -> ReadingScope:
@@ -62,8 +64,9 @@ def _scope(dataset: AcademicDataset, student_id: str, principal_id: str) -> Read
 
 def _build_service(
     root: Path, dataset: AcademicDataset
-) -> tuple[ConversationService, ReadingRepository]:
+) -> tuple[ConversationService, ReadingRepository, dict[str, str]]:
     repository = ReadingRepository(root / "readings")
+    pdf_checksums: dict[str, str] = {}
     reviews = load_reviews(MANIFEST_DIR / "reading_qa.json")
     for document in dataset.catalog.reading_documents:
         source = PDF_DIR / document.source_filename
@@ -72,14 +75,15 @@ def _build_service(
         review = reviews.documents.get(document.document_id)
         if review is None:
             raise ValueError(f"QA review is missing for {document.document_id}")
-        ingest_reading(document, PDF_DIR, repository, review)
+        report = ingest_reading(document, PDF_DIR, repository, review)
+        pdf_checksums[document.source_filename] = report.source_checksum
 
     service = ConversationService(
         ConversationRepository(root / "conversations.sqlite3"),
         lambda: dataset,
         LocalRetriever(repository),
     )
-    return service, repository
+    return service, repository, pdf_checksums
 
 
 def _metric(numerator: int, denominator: int) -> dict[str, int | float | None]:
@@ -90,10 +94,10 @@ def _metric(numerator: int, denominator: int) -> dict[str, int | float | None]:
     }
 
 
-def _validate_fixture() -> dict[str, Any]:
+def _validate_fixture(fixture_bytes: bytes | None = None) -> dict[str, Any]:
     import jsonschema
 
-    fixture = json.loads(FIXTURE_PATH.read_text(encoding="utf-8"))
+    fixture = json.loads(FIXTURE_PATH.read_bytes() if fixture_bytes is None else fixture_bytes)
     schema = json.loads(
         (DATA_ROOT / "schemas" / "test_conversations.schema.json").read_text(encoding="utf-8")
     )
@@ -102,7 +106,8 @@ def _validate_fixture() -> dict[str, Any]:
 
 
 def run() -> dict[str, Any]:
-    fixture = _validate_fixture()
+    fixture_bytes = FIXTURE_PATH.read_bytes()
+    fixture = _validate_fixture(fixture_bytes)
     dataset = load_dataset(DATA_ROOT)
     missing = [name for name in PDF_NAMES if not (PDF_DIR / name).is_file()]
     if missing:
@@ -125,7 +130,7 @@ def run() -> dict[str, Any]:
     citation_results: list[dict[str, Any]] = []
 
     with tempfile.TemporaryDirectory(prefix="m7-baseline-") as temporary:
-        service, readings = _build_service(Path(temporary), dataset)
+        service, readings, pdf_checksums = _build_service(Path(temporary), dataset)
 
         # Replay the canonical tutor dialogue in one persistent conversation.
         tutor_fixture = next(x for x in fixture["conversations"] if x["kind"] == "tutor")
@@ -195,7 +200,7 @@ def run() -> dict[str, Any]:
                 else:
                     is_correct = (
                         response.status == "ok"
-                        and str(expected_value) in response.text
+                        and _electron_capacity_matches(response.text, expected_value)
                         and any(
                             citation.pdf_page_number == 4 and citation.label == "Figure 2"
                             for citation in response.citations
@@ -278,8 +283,8 @@ def run() -> dict[str, Any]:
 
     return {
         "generated_at": datetime.now(UTC).isoformat(),
-        "fixture_sha256": sha256(FIXTURE_PATH),
-        "pdf_sha256": {name: sha256(PDF_DIR / name) for name in PDF_NAMES},
+        "fixture_sha256": hashlib.sha256(fixture_bytes).hexdigest(),
+        "pdf_sha256": pdf_checksums,
         "composer": "OfflineAnswerComposer",
         "external_calls": 0,
         "metrics": {
