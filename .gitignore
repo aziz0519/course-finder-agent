@@ -45,6 +45,12 @@ data/processed/*
 data/incoming/*
 !data/incoming/.gitkeep
 
+# --- Browser / container CI artefacts ------------------------------------------------
+e2e/artifacts/
+playwright-report/
+test-results/
+compose-logs.txt
+
 # --- OS / editor ---------------------------------------------------------------------
 .DS_Store
 Thumbs.db

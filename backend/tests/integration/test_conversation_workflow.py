@@ -105,6 +105,7 @@ def test_service_denies_scope_from_another_principal(
         raise AssertionError("cross-principal scope was accepted")
 
 
+@pytest.mark.corpus
 def test_bohr_tutor_follow_up_uses_reviewed_visual(
     dataset: AcademicDataset, data_root: Path, tmp_path: Path
 ) -> None:

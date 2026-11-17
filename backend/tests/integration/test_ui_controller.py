@@ -131,6 +131,7 @@ def test_ui_client_rejects_bad_credentials_and_invalid_session(client: ApiClient
     assert expired.value.status_code == 401
 
 
+@pytest.mark.corpus
 def test_ui_client_chat_citations_and_page_images(
     api_app: FastAPI,
     client: ApiClient,
@@ -164,6 +165,7 @@ def test_ui_client_chat_citations_and_page_images(
     assert student.asset_bytes(thread_id, asset).startswith(b"\x89PNG")
 
 
+@pytest.mark.corpus
 def test_ui_client_owner_scope_and_adviser_assignment(
     api_app: FastAPI,
     client: ApiClient,

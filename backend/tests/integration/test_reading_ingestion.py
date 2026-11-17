@@ -55,6 +55,7 @@ def scope(course: str, document_id: str) -> ReadingScope:
         ("HIST 250", "hist250-demon-core", 9),
     ],
 )
+@pytest.mark.corpus
 def test_corpus_page_coverage_and_provenance(
     corpus: ReadingRepository,
     course: str,
@@ -74,6 +75,7 @@ def test_corpus_page_coverage_and_provenance(
     assert reading.attribution.license_id == "CC-BY-SA"
 
 
+@pytest.mark.corpus
 def test_reference_inventory_and_no_guessed_formulas(corpus: ReadingRepository) -> None:
     reading, _ = corpus.active_candidates("PHYS 230", frozenset({"phys230-critical-mass"}))[0]
     for kind, expected in (
@@ -89,6 +91,7 @@ def test_reference_inventory_and_no_guessed_formulas(corpus: ReadingRepository) 
     assert all(a.safety_label == "restricted" for a in reading.assets)
 
 
+@pytest.mark.corpus
 def test_bohr_caption_retrieval_and_citation_round_trip(corpus: ReadingRepository) -> None:
     retriever = LocalRetriever(corpus)
     authorized = scope("PHYS 350", "phys350-bohr-model")
@@ -101,6 +104,7 @@ def test_bohr_caption_retrieval_and_citation_round_trip(corpus: ReadingRepositor
         assert evidence.untrusted_source
 
 
+@pytest.mark.corpus
 def test_bohr_verified_shell_diagram(corpus: ReadingRepository, data_root: Path) -> None:
     retriever = LocalRetriever(corpus)
     result = retriever.resolve_visual(
@@ -126,6 +130,7 @@ def test_bohr_verified_shell_diagram(corpus: ReadingRepository, data_root: Path)
     assert match and int(match[1]) == tutor["turns"][2]["expected_answer_value"]
 
 
+@pytest.mark.corpus
 def test_bohr_equation_abstention_and_ambiguous_diagram(corpus: ReadingRepository) -> None:
     retriever = LocalRetriever(corpus)
     authorized = scope("PHYS 350", "phys350-bohr-model")
@@ -153,6 +158,7 @@ def test_bohr_equation_abstention_and_ambiguous_diagram(corpus: ReadingRepositor
     )
 
 
+@pytest.mark.corpus
 def test_reviewed_table_matches_render(corpus: ReadingRepository) -> None:
     result = LocalRetriever(corpus).resolve_visual(
         scope("ENGL 120", "engl120-the-raven"),
@@ -169,6 +175,7 @@ def test_reviewed_table_matches_render(corpus: ReadingRepository) -> None:
     assert rows[-1] == ("Lines", "108")
 
 
+@pytest.mark.corpus
 def test_unverified_table_abstains(corpus: ReadingRepository) -> None:
     assert (
         LocalRetriever(corpus)
@@ -189,6 +196,7 @@ def test_unverified_table_abstains(corpus: ReadingRepository) -> None:
     ("course", "document_id"),
     [("PHYS 230", "phys230-critical-mass"), ("HIST 250", "hist250-demon-core")],
 )
+@pytest.mark.corpus
 def test_restricted_content_never_leaks(
     corpus: ReadingRepository,
     course: str,
@@ -203,6 +211,7 @@ def test_restricted_content_never_leaks(
         retriever.resolve_citation(authorized, course, reading.chunks[0].chunk_id)
 
 
+@pytest.mark.corpus
 def test_corpus_reingestion_is_idempotent(
     corpus: ReadingRepository,
     dataset: AcademicDataset,
@@ -238,6 +247,7 @@ def test_manifest_is_strict_and_checksum_bound(data_root: Path) -> None:
         ("HIST 210", "hist210-niels-bohr", "early life education Copenhagen 1885", 3),
     ],
 )
+@pytest.mark.corpus
 def test_other_readings_have_grounded_prose(
     corpus: ReadingRepository,
     course: str,
@@ -251,6 +261,7 @@ def test_other_readings_have_grounded_prose(
     assert all(e.document_id == document_id for e in result.evidence)
 
 
+@pytest.mark.corpus
 def test_table_chunks_repeat_source_header(corpus: ReadingRepository) -> None:
     reading, _ = corpus.active_candidates("ENGL 120", frozenset({"engl120-the-raven"}))[0]
     table_chunks = [
@@ -260,6 +271,7 @@ def test_table_chunks_repeat_source_header(corpus: ReadingRepository) -> None:
     assert all(c.text.startswith("Item | Detail\n") and c.asset_refs for c in table_chunks)
 
 
+@pytest.mark.corpus
 def test_parsed_json_round_trip(corpus: ReadingRepository) -> None:
     reading, root = corpus.active_candidates("ENGL 120", frozenset({"engl120-the-raven"}))[0]
     assert ParsedReading.model_validate_json((root / "parsed.json").read_text()) == reading

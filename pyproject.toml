@@ -25,6 +25,9 @@ dev = [
     "mypy>=1.13",
     "types-jsonschema>=4.23",
 ]
+e2e = [
+    "playwright>=1.49",
+]
 infra = [
     "aws-cdk-lib>=2.180,<3",
     "constructs>=10,<11",
@@ -44,6 +47,10 @@ packages = ["backend/app"]
 testpaths = ["backend/tests", "infra/tests"]
 pythonpath = ["backend", "."]
 addopts = "-q"
+markers = [
+    "corpus: needs the approved reading PDFs, which are not committed to git",
+    "e2e: browser-level test that needs running API/UI containers",
+]
 
 [tool.coverage.run]
 source = ["backend/app"]
@@ -52,7 +59,7 @@ branch = true
 [tool.ruff]
 line-length = 100
 target-version = "py312"
-src = ["backend", "scripts", "ui"]
+src = ["backend", "scripts", "ui", "infra", "e2e"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
@@ -63,7 +70,7 @@ select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
 [tool.mypy]
 python_version = "3.12"
 mypy_path = "backend:scripts"
-files = ["backend/app", "backend/tests", "scripts", "ui", "infra"]
+files = ["backend/app", "backend/tests", "scripts", "ui", "infra", "e2e"]
 check_untyped_defs = true
 warn_unused_ignores = true
 warn_redundant_casts = true

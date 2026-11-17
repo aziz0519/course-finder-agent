@@ -18,14 +18,16 @@ assistant says so instead of guessing.
 | **M3** | Conversation state, supervisor routing, tutor and planner | ✅ **complete** (2026-11-14) |
 | **M4** | Local API, local auth, RBAC and HTTP acceptance tests | ✅ **implemented** (local demo scope) |
 | **M5** | Gradio UI over the API (student, adviser, admin) | ✅ **implemented** (local demo scope) |
-| **M6 P0** | AWS CDK v2 target architecture and offline assertions | ✅ **synth-only implemented** — no bootstrap, deploy, or AWS validation |
+| **M6 P0** | AWS CDK v2 target architecture, offline assertions, container CI, browser E2E | ✅ **implemented** — synth/build/test only; no bootstrap, deploy, ECR push, or AWS validation |
 | M7 | Acceptance run, quality baseline, documentation | |
 
-**Current repository verification:** Ruff passes, mypy passes across **98 source files**,
-**285 tests pass**, and strict fixture validation reports **62 passed, 0 warnings, 0
+**Current repository verification:** Ruff passes, mypy passes across **99 source files**,
+**290 tests pass**, and strict fixture validation reports **62 passed, 0 warnings, 0
 errors, 0 pending**. OpenAI is tested with a mocked transport; no live API key was used.
-The Gradio app is tested at the controller level and builds headlessly; no browser
-automation or live model call is included.
+The Gradio app is tested at the controller level and builds headlessly; M6 adds
+container image builds and browser-level smoke tests. Neither job publishes an image or
+contacts AWS. Corpus-specific regressions skip automatically on a clean checkout because
+the supplied PDFs are gitignored; see [docs/M6_CI.md](docs/M6_CI.md).
 
 ## M0 exit gate — confirmed
 
@@ -113,13 +115,17 @@ data/
   incoming/       admin upload staging (gitignored)
   processed/      renders, crops, parsed JSON, embeddings (gitignored)
 scripts/          validate_datasets.py (Phase 0), ingest_datasets.py (M2)
-infra/            AWS CDK v2 target and demo tiers (documented, not built)
+infra/            AWS CDK v2 target architecture (synth-only) and offline assertions
 docs/decisions/   architecture decision records
 ```
 
 `AGENTS.md` is the source of truth for scope, agent boundaries, and acceptance criteria.
 
 ## Commands
+
+<!-- coderabbit-ai-generated:v1 -->
+
+<!-- coderabbit-ai-generated-section:v1:d7aa08b2fbb174da099a8dbfbf47ffa72e658e0cabd0794c99aaf1584eff4894 -->
 
 | Command | Purpose |
 |---|---|
@@ -131,6 +137,11 @@ docs/decisions/   architecture decision records
 | `make lint` / `make fmt` | Ruff check / format |
 | `make typecheck` | mypy |
 | `make check` | lint + typecheck + tests |
+| `make images` | Build the API, UI, and worker images without pushing (activates the ingestion profile) |
+| `make e2e-up` / `make e2e` | Start Compose, wait for UI, run Playwright / run Playwright only |
+| `make ci-scope` | Fail if a workflow step provisions AWS or pushes images |
+
+<!-- /coderabbit-ai-generated:v1 -->
 
 ## Design invariants
 

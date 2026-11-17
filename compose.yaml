@@ -1,0 +1,79 @@
+# Local/CI smoke topology. It runs the same images that the workflow builds.
+# No AWS account, registry login, or orchestration service is involved.
+#
+#   docker compose up -d --build
+#   docker compose --profile ingestion run --rm worker
+#   docker compose down -v
+
+name: course-finder-agent
+
+x-app-environment: &app-environment
+  APP_ENV: development
+  AUTH_PROVIDER: local
+  LOCAL_DEV_PASSWORD: ${LOCAL_DEV_PASSWORD:-replace-me-local-only}
+  SESSION_SECRET: ${SESSION_SECRET:-replace-me-local-only}
+  CSRF_SECRET: ${CSRF_SECRET:-replace-me-local-only}
+  MODEL_PROVIDER: offline
+  DATA_ROOT: /app/data
+  DATABASE_URL: sqlite:////app/data/processed/app.db
+
+services:
+  api:
+    build:
+      context: .
+      target: api
+    environment: *app-environment
+    ports:
+      - "127.0.0.1:8000:8000"
+    init: true
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=2).read()",
+        ]
+      interval: 5s
+      timeout: 3s
+      retries: 24
+      start_period: 10s
+
+  ui:
+    build:
+      context: .
+      target: ui
+    environment:
+      COURSE_FINDER_API_URL: http://api:8000
+      UI_HOST: 0.0.0.0
+      UI_PORT: "7860"
+    ports:
+      - "127.0.0.1:7860:7860"
+    init: true
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:7860/', timeout=2).read()",
+        ]
+      interval: 5s
+      timeout: 3s
+      retries: 36
+      start_period: 15s
+
+  # On-demand only. The supplied PDFs are not baked into the image, so a local
+  # ingestion run mounts the approved files read-only.
+  worker:
+    profiles: ["ingestion"]
+    build:
+      context: .
+      target: worker
+    environment: *app-environment
+    volumes:
+      - ./data/samples/course-materials:/app/data/samples/course-materials:ro
+    init: true

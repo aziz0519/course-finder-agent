@@ -19,9 +19,9 @@ It defines:
 - Private Fargate frontend and API services and an on-demand ingestion task definition
   (no worker service). Service discovery allows the frontend task to call the API over
   the private VPC network.
-- Three ECR repositories with image scanning and immutable tags. `ImmutableImageTag`
-  is a CloudFormation parameter, defaulted only to `m6-synth-placeholder` for synthesis.
-  A real deployment must publish the same immutable tag to all repositories first.
+- Three ECR repositories with image scanning and immutable tags. The synth-time
+  `CDK_IMAGE_TAG` value (default `m6-synth-placeholder`) must be replaced by a real,
+  non-`latest` immutable tag published to all three repositories before deployment.
 - RDS PostgreSQL in isolated subnets, encrypted storage, generated Secrets Manager
   credentials, backups, CloudWatch database log export, and prod deletion protection.
   The application migration must enable PostgreSQL's `vector` extension; CDK does not
@@ -87,8 +87,8 @@ connectivity.
 
 ## Known runtime work not proven by P0
 
-- Build/publish compatible images to all three repositories before deploying ECS
-  services. The placeholder tag is for synth only.
+- CI builds all three images without pushing them. A deployment still needs an explicit
+  publish step for all three repositories using the same immutable tag.
 - The current local app uses local auth and local SQLite/filesystem adapters. Production
   Cognito verification, RDS configuration/migrations, S3 storage adapters, and ingestion
   task invocation still require application/runtime integration.

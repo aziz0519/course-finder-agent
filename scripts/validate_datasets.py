@@ -535,7 +535,13 @@ def validate_students(
 # --- Manifest and PDF preflight -------------------------------------------------------
 
 
-def validate_manifest(report: Report, manifest: Any, data_root: Path) -> None:
+def validate_manifest(
+    report: Report,
+    manifest: Any,
+    data_root: Path,
+    *,
+    allow_missing_readings: bool = False,
+) -> None:
     if not isinstance(manifest, dict):
         report.add("error", "Manifest shape", "expected a JSON object")
         return
@@ -576,8 +582,11 @@ def validate_manifest(report: Report, manifest: Any, data_root: Path) -> None:
         if exists and status == "pending":
             report.add("warn", "Manifest status stale", f"{code}: file present but marked pending")
         if not exists and status == "present":
+            severity: Severity = "pending" if allow_missing_readings else "error"
             report.add(
-                "error", "Manifest status stale", f"{code}: marked present but file is missing"
+                severity,
+                "Manifest status stale",
+                f"{code}: marked present but file is missing",
             )
 
         if not exists:
@@ -620,9 +629,7 @@ def validate_manifest(report: Report, manifest: Any, data_root: Path) -> None:
 # --- Conversation regression suite ---------------------------------------------------
 
 
-def validate_conversations(
-    report: Report, suite: Any, catalogue: Any, students: Any
-) -> None:
+def validate_conversations(report: Report, suite: Any, catalogue: Any, students: Any) -> None:
     """Validate the reconstructed multi-turn regression script.
 
     The suite is a test script, not academic evidence. Every course, document, and unit
@@ -864,6 +871,14 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="Treat pending input files as errors (use in CI once all data is supplied).",
     )
+    parser.add_argument(
+        "--allow-missing-readings",
+        action="store_true",
+        help=(
+            "Treat gitignored reading PDFs as pending instead of stale-manifest errors. "
+            "Use only for clean-checkout CI where the approved PDFs are intentionally absent."
+        ),
+    )
     args = parser.parse_args(argv)
 
     data_root = (args.data_root or get_settings().data_root).resolve()
@@ -935,7 +950,12 @@ def main(argv: list[str] | None = None) -> int:
         validate_students(report, students, course_codes, program_ids, current_term)
 
     if manifest is not None:
-        validate_manifest(report, manifest, data_root)
+        validate_manifest(
+            report,
+            manifest,
+            data_root,
+            allow_missing_readings=args.allow_missing_readings,
+        )
 
     if conversations is not None:
         conversations_valid = validate_schema(
