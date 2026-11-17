@@ -1,0 +1,120 @@
+{
+  "composer": "OfflineAnswerComposer",
+  "details": {
+    "citations": [
+      {
+        "document_id": "phys350-bohr-model",
+        "label": null,
+        "page": 2,
+        "resolved": true,
+        "title": "Bohr model"
+      },
+      {
+        "document_id": "phys350-bohr-model",
+        "label": null,
+        "page": 1,
+        "resolved": true,
+        "title": "Bohr model"
+      },
+      {
+        "document_id": "phys350-bohr-model",
+        "label": null,
+        "page": 2,
+        "resolved": true,
+        "title": "Bohr model"
+      },
+      {
+        "document_id": "phys350-bohr-model",
+        "label": "Figure 2",
+        "page": 4,
+        "resolved": true,
+        "title": "Bohr model"
+      }
+    ],
+    "planner": [
+      {
+        "correct": true,
+        "status": "ok",
+        "turn": 1,
+        "units": 12
+      },
+      {
+        "correct": true,
+        "status": "ok",
+        "turn": 2,
+        "units": 8
+      }
+    ],
+    "tutor": [
+      {
+        "citation_count": 3,
+        "grounded": true,
+        "id": "tutor-1",
+        "status": "ok"
+      },
+      {
+        "citation_count": 0,
+        "grounded": false,
+        "id": "tutor-2",
+        "status": "clarification_required"
+      },
+      {
+        "citation_count": 1,
+        "grounded": true,
+        "id": "tutor-3",
+        "status": "ok"
+      }
+    ]
+  },
+  "external_calls": 0,
+  "fixture_sha256": "347894375b4a0d7abfe435981a0471cf573a9e4b0c9a65ffe76154ca54c6b75c",
+  "generated_at": "2026-11-17T07:06:35.967818+00:00",
+  "metrics": {
+    "abstention_quality": {
+      "denominator": 2,
+      "numerator": 2,
+      "rate": 1.0
+    },
+    "access_control_pass_rate": {
+      "denominator": 2,
+      "numerator": 2,
+      "rate": 1.0
+    },
+    "citation_correctness": {
+      "denominator": 4,
+      "numerator": 4,
+      "rate": 1.0
+    },
+    "followup_resolution": {
+      "denominator": 2,
+      "numerator": 2,
+      "rate": 1.0
+    },
+    "grounded_answer_rate": {
+      "denominator": 2,
+      "numerator": 2,
+      "rate": 1.0
+    },
+    "planning_correctness": {
+      "denominator": 2,
+      "numerator": 2,
+      "rate": 1.0
+    }
+  },
+  "pdf_sha256": {
+    "engl120-the-raven.pdf": "d84bf67be1b4d236d25209fb9ab5ec9b27e4dfe3f916a9b248a461c716035b06",
+    "hist210-niels-bohr.pdf": "3d96a5a637fbe4be57e59e309330aa54c61a6fe7d79451702d260065b1ed6236",
+    "hist250-demon-core.pdf": "e56e78ce782fd223ee6f607ea114563ef1efb25455a6d64c875bd1f390e5c05a",
+    "phys230-critical-mass.pdf": "9cc30f28212b81a3886bb418511630c932ddab8a7150015d95b2ee86941f6539",
+    "phys350-bohr-model.pdf": "622528681a286090f9a509815a31ca02cbcc1fe92b1dd731f697e329b8d2adcf"
+  },
+  "visual_qa_limitations": {
+    "approved_assets": 4,
+    "quarantined_documents": [
+      "phys230-critical-mass",
+      "hist250-demon-core"
+    ],
+    "total_assets": 50,
+    "visual_qa_complete_documents": 0
+  }
+}

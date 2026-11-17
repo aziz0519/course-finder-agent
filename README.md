@@ -19,15 +19,20 @@ assistant says so instead of guessing.
 | **M4** | Local API, local auth, RBAC and HTTP acceptance tests | ✅ **implemented** (local demo scope) |
 | **M5** | Gradio UI over the API (student, adviser, admin) | ✅ **implemented** (local demo scope) |
 | **M6 P0** | AWS CDK v2 target architecture, offline assertions, container CI, browser E2E | ✅ **implemented** — synth/build/test only; no bootstrap, deploy, ECR push, or AWS validation |
-| M7 | Acceptance run, quality baseline, documentation | |
+| **M7** | Local HTTP acceptance, offline quality baseline, hardening and documentation | ✅ **implemented locally** — report-only baseline; AWS remains out of scope |
 
-**Current repository verification:** Ruff passes, mypy passes across **99 source files**,
-**290 tests pass**, and strict fixture validation reports **62 passed, 0 warnings, 0
-errors, 0 pending**. OpenAI is tested with a mocked transport; no live API key was used.
+**Current repository verification:** Ruff and mypy pass; the default suite has **299
+tests** (4 acceptance tests are explicitly deselected), the acceptance marker has **4
+passing tests** with the PDFs present, and strict fixture validation reports **62
+passed, 0 warnings, 0 errors, 0 pending**. OpenAI is tested with a mocked transport; no
+live API key was used.
 The Gradio app is tested at the controller level and builds headlessly; M6 adds
 container image builds and browser-level smoke tests. Neither job publishes an image or
 contacts AWS. Corpus-specific regressions skip automatically on a clean checkout because
 the supplied PDFs are gitignored; see [docs/M6_CI.md](docs/M6_CI.md).
+M7 acceptance tests are selected with `make acceptance`; the corpus-dependent case is
+explicitly skipped/pending on clean CI checkouts. Offline baseline numbers are committed
+in [docs/M7_QUALITY_BASELINE.md](docs/M7_QUALITY_BASELINE.md) and are not CI thresholds.
 
 ## M0 exit gate — confirmed
 
@@ -134,6 +139,8 @@ docs/decisions/   architecture decision records
 | `make validate-strict` | Validation that fails on any missing input |
 | `make ingest` | Ingest all five readings with checksum-bound review and QA gates |
 | `make test` | Run the test suite |
+| `make acceptance` | Run explicit M7 HTTP acceptance tests |
+| `make baseline` | Generate the offline M7 quality baseline (requires local PDFs) |
 | `make lint` / `make fmt` | Ruff check / format |
 | `make typecheck` | mypy |
 | `make check` | lint + typecheck + tests |
@@ -142,6 +149,9 @@ docs/decisions/   architecture decision records
 | `make ci-scope` | Fail if a workflow step provisions AWS or pushes images |
 
 <!-- /coderabbit-ai-generated:v1 -->
+
+M7 results and limitations: [acceptance report](docs/M7_ACCEPTANCE_REPORT.md) and
+[offline quality baseline](docs/M7_QUALITY_BASELINE.md).
 
 ## Design invariants
 
