@@ -1,7 +1,7 @@
 .DEFAULT_GOAL := help
 PY := uv run python
 
-.PHONY: help sync validate validate-strict ingest test lint fmt typecheck check ui infra-synth clean
+.PHONY: help sync validate validate-strict ingest test lint fmt typecheck check ui infra-synth images e2e-up e2e e2e-down ci-scope clean
 
 help:  ## Show available targets
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-16s\033[0m %s\n", $$1, $$2}'
@@ -38,6 +38,22 @@ ui:  ## Run the Gradio UI (start the API first)
 
 infra-synth:  ## Locally synthesize CDK templates; performs no AWS calls
 	uv run python -m infra.app
+
+images:  ## Build the API, UI, and worker container images (no push)
+	docker compose build
+
+e2e-up:  ## Build and start API/UI containers, then wait for the UI
+	docker compose up -d --build
+	bash scripts/wait_for_ui.sh
+
+e2e:  ## Run browser E2E against an already-running UI
+	uv run pytest e2e -q
+
+e2e-down:  ## Stop containers and remove their local volumes
+	docker compose down -v
+
+ci-scope:  ## Verify the workflow contains no AWS/ECR deployment steps
+	bash scripts/check_ci_scope.sh
 
 clean:  ## Remove local caches and derived artefacts
 	rm -rf .pytest_cache .mypy_cache .ruff_cache .coverage htmlcov

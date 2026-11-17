@@ -106,6 +106,34 @@ def _supplied_fixtures() -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]
     )
 
 
+def test_allow_missing_readings_is_explicit_and_keeps_a_clean_checkout_green(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """The PDFs are gitignored, so CI opts in to treating them as pending."""
+
+    _, catalogue, students = _supplied_fixtures()
+    samples = tmp_path / "samples"
+    manifests = tmp_path / "manifests"
+    samples.mkdir()
+    manifests.mkdir()
+    (samples / "course-catalog.json").write_text(json.dumps(catalogue), encoding="utf-8")
+    (samples / "student-records.json").write_text(json.dumps(students), encoding="utf-8")
+    manifest = json.loads(
+        (validator.REPO_ROOT / "data" / "manifests" / "course_readings_manifest.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    (manifests / "course_readings_manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
+
+    assert validator.main(["--data-root", str(tmp_path)]) == 1
+    assert "FAILED" in capsys.readouterr().out
+
+    assert validator.main(["--data-root", str(tmp_path), "--allow-missing-readings"]) == 0
+    output = capsys.readouterr().out
+    assert "PARTIAL" in output
+    assert "0 error(s)" in output
+
+
 def test_conversation_validator_rejects_an_unverified_diagram_value() -> None:
     suite, catalogue, students = _supplied_fixtures()
     tampered = deepcopy(suite)

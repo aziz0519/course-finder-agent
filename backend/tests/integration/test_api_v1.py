@@ -283,6 +283,7 @@ def test_student_materials_and_adviser_assignment_list(api_client: TestClient) -
     ]
 
 
+@pytest.mark.corpus
 def test_bohr_conversation_and_owner_scoped_citations(api_client: TestClient) -> None:
     services = cast(FastAPI, api_client.app).state.services
     dataset = services.dataset()

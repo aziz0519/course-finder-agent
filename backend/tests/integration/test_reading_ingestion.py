@@ -15,6 +15,8 @@ from app.ingestion.readings import ingest_reading, load_reviews
 from app.repositories.readings import ReadingRepository
 from app.retrieval.readings import LocalRetriever, ReadingScope
 
+pytestmark = pytest.mark.corpus
+
 
 @pytest.fixture(scope="module")
 def corpus(

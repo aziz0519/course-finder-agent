@@ -16,6 +16,31 @@ if str(SCRIPTS_DIR) not in sys.path:
 from app.core.config import get_settings  # noqa: E402
 from app.ingestion.dataset import AcademicDataset, load_dataset  # noqa: E402
 
+CORPUS_FILENAMES = (
+    "phys230-critical-mass.pdf",
+    "phys350-bohr-model.pdf",
+    "engl120-the-raven.pdf",
+    "hist210-niels-bohr.pdf",
+    "hist250-demon-core.pdf",
+)
+
+
+def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:
+    """Skip reading-corpus tests when the supplied PDFs are not installed.
+
+    The five PDFs are deliberately gitignored. A clean GitHub checkout therefore
+    runs the deterministic suite plus synthetic-PDF tests, while corpus-specific
+    regressions remain available wherever the approved files are mounted.
+    """
+
+    materials = get_settings().course_materials_dir
+    if all((materials / name).is_file() for name in CORPUS_FILENAMES):
+        return
+    skip = pytest.mark.skip(reason="approved reading PDFs are not installed")
+    for item in items:
+        if "corpus" in item.keywords:
+            item.add_marker(skip)
+
 
 @pytest.fixture(scope="session")
 def data_root() -> Path:

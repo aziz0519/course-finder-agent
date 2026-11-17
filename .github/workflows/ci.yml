@@ -1,0 +1,136 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHON_VERSION: "3.12"
+  UV_VERSION: "0.13.8"
+
+jobs:
+  quality:
+    name: Lint, type-check, tests, synth
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: ${{ env.UV_VERSION }}
+          python-version: ${{ env.PYTHON_VERSION }}
+          enable-cache: true
+
+      - name: Install locked dependencies
+        run: uv sync --frozen --all-groups
+
+      - name: Enforce no-AWS CI scope
+        run: bash scripts/check_ci_scope.sh
+
+      - name: Lint
+        run: uv run ruff check .
+
+      - name: Type-check
+        run: uv run mypy
+
+      - name: Tests
+        run: uv run pytest -q
+
+      - name: Validate supplied academic fixtures (clean checkout)
+        run: uv run python scripts/validate_datasets.py --allow-missing-readings
+
+      - name: Synthesize CDK templates locally
+        run: uv run python -m infra.app
+
+      - name: Confirm synthesized template exists
+        run: test -f cdk.out/CourseFinder-dev.template.json
+
+  docker-images:
+    name: Build ${{ matrix.target }} image (no push)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [api, ui, worker]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build image without publishing
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          target: ${{ matrix.target }}
+          push: false
+          tags: course-finder-${{ matrix.target }}:ci
+          cache-from: type=gha,scope=${{ matrix.target }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.target }}
+
+  e2e:
+    name: Container smoke and browser E2E
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    needs: [quality, docker-images]
+    env:
+      LOCAL_DEV_PASSWORD: local-e2e-password
+      SESSION_SECRET: local-e2e-session-secret
+      CSRF_SECRET: local-e2e-csrf-secret
+      E2E_PASSWORD: local-e2e-password
+      E2E_UI_URL: http://127.0.0.1:7860
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: ${{ env.UV_VERSION }}
+          python-version: ${{ env.PYTHON_VERSION }}
+          enable-cache: true
+
+      - name: Install test dependencies and Chromium
+        run: |
+          uv sync --frozen --all-groups
+          uv run playwright install --with-deps chromium
+
+      - name: Build local containers
+        run: docker compose build
+
+      - name: Start API and UI
+        run: docker compose up -d
+
+      - name: Wait for the UI
+        run: bash scripts/wait_for_ui.sh
+
+      - name: Run browser E2E
+        run: uv run pytest e2e -q
+
+      - name: Capture container logs
+        if: always()
+        run: docker compose logs --no-color > compose-logs.txt
+
+      - name: Upload failure diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-diagnostics
+          path: |
+            compose-logs.txt
+            e2e/artifacts/**
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Tear down containers
+        if: always()
+        run: docker compose down -v
