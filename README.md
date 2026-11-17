@@ -123,6 +123,10 @@ docs/decisions/   architecture decision records
 
 ## Commands
 
+<!-- coderabbit-ai-generated:v1 -->
+
+<!-- coderabbit-ai-generated-section:v1:d7aa08b2fbb174da099a8dbfbf47ffa72e658e0cabd0794c99aaf1584eff4894 -->
+
 | Command | Purpose |
 |---|---|
 | `make sync` | Create the venv and install dependencies |
@@ -133,9 +137,11 @@ docs/decisions/   architecture decision records
 | `make lint` / `make fmt` | Ruff check / format |
 | `make typecheck` | mypy |
 | `make check` | lint + typecheck + tests |
-| `make images` | Build the API, UI, and worker images without pushing |
+| `make images` | Build the API, UI, and worker images without pushing (activates the ingestion profile) |
 | `make e2e-up` / `make e2e` | Start Compose, wait for UI, run Playwright / run Playwright only |
 | `make ci-scope` | Fail if a workflow step provisions AWS or pushes images |
+
+<!-- /coderabbit-ai-generated:v1 -->
 
 ## Design invariants
 

@@ -34,9 +34,16 @@ separate test path.
 | `ui` | `python -m ui.app` on port 7860 | Gradio UI calling the API over HTTP |
 | `worker` | `python scripts/ingest_datasets.py` | On-demand ingestion job; no service |
 
+<!-- coderabbit-ai-generated:v1 -->
+
+<!-- coderabbit-ai-generated-section:v1:c7055910f253a6a5240daf6abae0c081e4d813d82db17cad5ee8a0657768e030 -->
+
 `compose.yaml` starts only `api` and `ui` by default. The worker is behind the
 `ingestion` profile and mounts the local `data/samples/course-materials` directory
-read-only. PDFs are not baked into images.
+read-only. PDFs are not baked into images. `make images` activates the ingestion
+profile to build all three images.
+
+<!-- /coderabbit-ai-generated:v1 -->
 
 ## Readiness and E2E coverage
 
@@ -96,8 +103,18 @@ uv run pytest e2e -q
 make e2e-down
 ```
 
-`E2E_PASSWORD` must match the API's `LOCAL_DEV_PASSWORD`. Compose defaults to
-`local-e2e-password` for disposable local runs; CI sets the same value explicitly.
+<!-- coderabbit-ai-generated:v1 -->
+
+<!-- coderabbit-ai-generated-section:v1:bea41565cbcc3d08c9a72b0e86624c4c55d2bc45fe133bb6a4cec29c2043d5c2 -->
+
+Before starting Compose, copy `.env.example` to `.env` and replace
+`LOCAL_DEV_PASSWORD`, `SESSION_SECRET`, and `CSRF_SECRET` with disposable local
+values. The Compose defaults are rejected placeholders: login is disabled until a
+password is configured, and production rejects the placeholder secrets.
+`E2E_PASSWORD` must match the API's `LOCAL_DEV_PASSWORD`; CI supplies its local
+values explicitly.
+
+<!-- /coderabbit-ai-generated:v1 -->
 
 ## Verification status
 

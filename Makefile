@@ -40,7 +40,7 @@ infra-synth:  ## Locally synthesize CDK templates; performs no AWS calls
 	uv run python -m infra.app
 
 images:  ## Build the API, UI, and worker container images (no push)
-	docker compose build
+	docker compose --profile ingestion build
 
 e2e-up:  ## Build and start API/UI containers, then wait for the UI
 	docker compose up -d --build

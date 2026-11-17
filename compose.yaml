@@ -10,9 +10,9 @@ name: course-finder-agent
 x-app-environment: &app-environment
   APP_ENV: development
   AUTH_PROVIDER: local
-  LOCAL_DEV_PASSWORD: ${LOCAL_DEV_PASSWORD:-local-e2e-password}
-  SESSION_SECRET: ${SESSION_SECRET:-local-e2e-session-secret}
-  CSRF_SECRET: ${CSRF_SECRET:-local-e2e-csrf-secret}
+  LOCAL_DEV_PASSWORD: ${LOCAL_DEV_PASSWORD:-replace-me-local-only}
+  SESSION_SECRET: ${SESSION_SECRET:-replace-me-local-only}
+  CSRF_SECRET: ${CSRF_SECRET:-replace-me-local-only}
   MODEL_PROVIDER: offline
   DATA_ROOT: /app/data
   DATABASE_URL: sqlite:////app/data/processed/app.db
@@ -24,7 +24,7 @@ services:
       target: api
     environment: *app-environment
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
     init: true
     healthcheck:
       test:
@@ -48,7 +48,7 @@ services:
       UI_HOST: 0.0.0.0
       UI_PORT: "7860"
     ports:
-      - "7860:7860"
+      - "127.0.0.1:7860:7860"
     init: true
     depends_on:
       api:
