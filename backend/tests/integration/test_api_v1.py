@@ -86,6 +86,7 @@ def test_student_profile_progress_and_courses(api_client: TestClient) -> None:
     assert "content" not in profile_access["metadata"]
 
 
+@pytest.mark.acceptance
 def test_planner_and_multi_turn_cap(api_client: TestClient) -> None:
     csrf = login(api_client, "student-001")
 
@@ -141,6 +142,7 @@ def test_csrf_and_thread_ownership_are_enforced(api_client: TestClient) -> None:
     assert other.get(f"/api/v1/chat/sessions/{thread_id}").status_code == 404
 
 
+@pytest.mark.acceptance
 def test_unsupported_fact_is_not_invented_over_http(api_client: TestClient) -> None:
     csrf = login(api_client, "student-001")
     created = api_client.post(
@@ -160,6 +162,7 @@ def test_unsupported_fact_is_not_invented_over_http(api_client: TestClient) -> N
     assert answer["citations"] == []
 
 
+@pytest.mark.acceptance
 def test_adviser_assignment_and_admin_role_are_enforced(
     api_client: TestClient,
     monkeypatch: pytest.MonkeyPatch,
@@ -218,6 +221,28 @@ def test_invalid_password_is_rejected(api_client: TestClient) -> None:
     )
     assert response.status_code == 401
     assert response.json()["detail"] == "Invalid username or password."
+
+
+def test_request_body_limit_and_audit_metadata_redaction(api_client: TestClient) -> None:
+    oversized = api_client.post(
+        "/api/v1/chat/sessions",
+        content=b"x" * (1_048_576 + 1),
+        headers={"Content-Type": "application/json"},
+    )
+    assert oversized.status_code == 413
+    denial = cast(FastAPI, api_client.app).state.services.audit.events()[-1]
+    assert denial["outcome"] == "denied"
+    assert denial["metadata"] == {"http_status": "413"}
+
+    csrf = login(api_client, "student-001")
+    response = api_client.post(
+        "/api/v1/chat/sessions",
+        json={},
+        headers={"X-CSRF-Token": csrf, "Authorization": "Bearer sensitive-test-token"},
+    )
+    assert response.status_code == 201
+    events = cast(FastAPI, api_client.app).state.services.audit.events()
+    assert "sensitive-test-token" not in repr(events)
 
 
 def test_logout_revokes_session_and_login_is_rate_limited(api_client: TestClient) -> None:
@@ -283,6 +308,7 @@ def test_student_materials_and_adviser_assignment_list(api_client: TestClient) -
     ]
 
 
+@pytest.mark.acceptance
 @pytest.mark.corpus
 def test_bohr_conversation_and_owner_scoped_citations(api_client: TestClient) -> None:
     services = cast(FastAPI, api_client.app).state.services
@@ -319,6 +345,20 @@ def test_bohr_conversation_and_owner_scoped_citations(api_client: TestClient) ->
     )
     assert citation_response.status_code == 200
     assert citation_response.json()["page_number"] == citations[0]["pdf_page_number"]
+
+    equation = api_client.post(
+        f"/api/v1/chat/sessions/{thread_id}/messages",
+        json={
+            "content": (
+                "According to the equation on PDF page 7, can you explain it in "
+                "simpler terms?"
+            )
+        },
+        headers={"X-CSRF-Token": csrf},
+    )
+    assert equation.status_code == 201
+    assert equation.json()["response"]["status"] == "insufficient_evidence"
+    assert not equation.json()["response"]["citations"]
 
     ambiguous = api_client.post(
         f"/api/v1/chat/sessions/{thread_id}/messages",

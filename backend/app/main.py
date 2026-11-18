@@ -10,6 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 
+from app.api.request_limits import RequestBodyLimitMiddleware
 from app.api.v1.routes import api_router
 from app.api.v1.services import ApiServices
 from app.core.config import Settings, get_settings
@@ -62,6 +63,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             await record_outcome(response.status_code)
             return response
 
+    application.add_middleware(RequestBodyLimitMiddleware, max_bytes=1_048_576)
     application.add_middleware(RedactedAuditMiddleware)
     origins = (
         ["http://localhost:3000", "http://127.0.0.1:3000"]

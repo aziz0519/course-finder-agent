@@ -31,15 +31,21 @@ def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:
     The five PDFs are deliberately gitignored. A clean GitHub checkout therefore
     runs the deterministic suite plus synthetic-PDF tests, while corpus-specific
     regressions remain available wherever the approved files are mounted.
+    Acceptance tests that need actual PDF bytes also carry the ``corpus`` marker;
+    academic-data and authorization acceptance tests remain runnable in clean CI.
     """
 
     materials = get_settings().course_materials_dir
-    if all((materials / name).is_file() for name in CORPUS_FILENAMES):
+    pdfs_present = all((materials / name).is_file() for name in CORPUS_FILENAMES)
+
+    if not pdfs_present:
+        skip = pytest.mark.skip(reason="approved reading PDFs are not installed")
+        for item in items:
+            if "corpus" in item.keywords:
+                item.add_marker(skip)
         return
-    skip = pytest.mark.skip(reason="approved reading PDFs are not installed")
-    for item in items:
-        if "corpus" in item.keywords:
-            item.add_marker(skip)
+
+    # PDFs are present — acceptance tests can run.
 
 
 @pytest.fixture(scope="session")
