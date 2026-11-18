@@ -12,9 +12,7 @@ The sample scenario treats **Fall 2026** as the current term and
 maximum of **16 units per term** and states that a course in progress in
 Fall 2026 counts toward prerequisites for courses in the following term.
 
-<!-- coderabbit-ai-generated:v1 -->
 
-<!-- coderabbit-ai-generated-section:v1:42f66e6f17822c4b1cb27a4bffaaf0d6a62ecae793e700f410719e29b7207d47 -->
 
 The current MVP uses a lightweight **Gradio UI** and a modular Python
 backend with deterministic regex-based intent routing to specialist
@@ -25,22 +23,15 @@ and retrieval data and S3 for source documents and visual assets are also
 target components. Agents are logical responsibility boundaries; they do
 not need to be independently deployed services in the MVP.
 
-<!-- /coderabbit-ai-generated:v1 -->
+
 
 The assistant provides advice, not official registration or changes to
 academic records.
 
-<!-- coderabbit-ai-generated:v1 -->
 
-<!-- coderabbit-ai-generated-section:v1:54e7c68e3d4ac8fe873067038779e85d0926c85f0c20562acc2e9cea21ee1681 -->
 
 ## 2. Target components and agent boundaries
 
-<!-- /coderabbit-ai-generated:v1 -->
-
-<!-- coderabbit-ai-generated:v1 -->
-
-<!-- coderabbit-ai-generated-section:v1:79c6a0f6b890634b50d8fd35ebcb510374c525d2afd79c607b3a92f8960a78e8 -->
 
 | Component | Responsibility | Boundary |
 | --- | --- | --- |
@@ -55,7 +46,6 @@ academic records.
 | Retrieval service | Search extracted reading chunks and associated visual evidence | Returns source metadata and evidence references |
 | Conversation state store | Preserve history, preferences, and source references between turns | Context only; not an authoritative academic record |
 
-<!-- /coderabbit-ai-generated:v1 -->
 
 ### Boundary principles
 
@@ -71,13 +61,10 @@ academic records.
 -   If the supplied data cannot answer a question, the assistant says so
     rather than guessing.
 
-<!-- coderabbit-ai-generated:v1 -->
-
-<!-- coderabbit-ai-generated-section:v1:a17d2a94db4528369848d76f6532b675f282561d766ca9fd83b7b6c7cb3d232e -->
 
 ## 3. Target runtime system overview
 
-<!-- /coderabbit-ai-generated:v1 -->
+
 
 ``` mermaid
 flowchart TD
@@ -117,9 +104,6 @@ interactive requests.
 
 ## 4. First message to response
 
-<!-- coderabbit-ai-generated:v1 -->
-
-<!-- coderabbit-ai-generated-section:v1:97c4e79f3043d6f756d80da9ec8f2755a38728014d36d2c99d038e78295fcb70 -->
 
 1.  **Message submission:** The student submits a question in Gradio.
     The request includes the message, conversation ID when continuing a
@@ -152,7 +136,6 @@ interactive requests.
     references in conversation state, then return a structured response
     to Gradio.
 
-<!-- /coderabbit-ai-generated:v1 -->
 
 Re-check authorization on every turn. Conversation history does not
 grant access to data.
@@ -392,9 +375,7 @@ advanced.
 
 ## 8. Failure handling
 
-<!-- coderabbit-ai-generated:v1 -->
 
-<!-- coderabbit-ai-generated-section:v1:9097e06251eb63755ca3fd30155e7b34731b0778b8d4d1d6d3bcebc1eb76df0d -->
 
 | Condition | Expected behaviour |
 | --- | --- |
@@ -409,7 +390,7 @@ advanced.
 | Model/retrieval unavailable | Return controlled error, not fabricated content |
 | Tool failure | Bounded retry and record failure |
 
-<!-- /coderabbit-ai-generated:v1 -->
+
 
 ## 9. Guardrails and security
 
@@ -434,9 +415,7 @@ facilitate construction or optimisation of a weapon.
 
 ## 10. MVP to production
 
-<!-- coderabbit-ai-generated:v1 -->
 
-<!-- coderabbit-ai-generated-section:v1:2ef600e3f4956178d5b7c636b9f7d6a0ec5e8f09241b274c1f9fb2a1c8d52450 -->
 
 **MVP** - Gradio UI and one modular Python backend with deterministic
 regex-based intent routing and logically specialised agents. - LangGraph
@@ -445,7 +424,7 @@ is currently implemented or declared as a dependency. - PostgreSQL with pgvector
 processed visual assets. - Basic authentication and RBAC. - Separate
 ingestion worker where practical. - AWS CDK v2 provisioning.
 
-<!-- /coderabbit-ai-generated:v1 -->
+
 
 **Production evolution** - Integrate the institution's portal, SSO, and
 authoritative SIS/LMS APIs. - Scale interactive APIs and ingestion
@@ -459,9 +438,6 @@ runtime options if operational needs justify them.
 
 ## 11. Acceptance tests
 
-<!-- coderabbit-ai-generated:v1 -->
-
-<!-- coderabbit-ai-generated-section:v1:6fc6a2c4d3884e8c155504ddd910ce295f02d79753c17951be361a3cd5dcfc77 -->
 
 | Test | Required behaviour |
 | --- | --- |
@@ -470,7 +446,7 @@ runtime options if operational needs justify them.
 | "What should I take in Spring 2027 to progress my degree? Keep it to 12 units." | Produce a feasible plan within 12 units using student-001 and supplied policies |
 | "I have accepted a part-time internship, so cap me at 8 units." | Preserve term/student context, update cap, and recompute plan |
 
-<!-- /coderabbit-ai-generated:v1 -->
+
 
 Tests must validate evidence, calculations, authorization, and persisted
 follow-up state, not just response wording.

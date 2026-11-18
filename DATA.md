@@ -26,9 +26,7 @@ are not authoritative academic records.
 
 ## 2. Source datasets
 
-<!-- coderabbit-ai-generated:v1 -->
 
-<!-- coderabbit-ai-generated-section:v1:ebd0c39fe2302811c1f70eb19de747c45973c1704983ada980166138c2d7faca -->
 
 | Dataset | Format | Use | MVP source of truth |
 | --- | --- | --- | --- |
@@ -37,7 +35,7 @@ are not authoritative academic records.
 | Degree requirements | JSON section of catalogue | Degree progress and elective/core rules | Validated relational representation plus retained source JSON |
 | Student records | JSON | Student-specific planning | Validated relational representation plus retained source JSON |
 
-<!-- /coderabbit-ai-generated:v1 -->
+
 
 The supplied files are authoritative inputs for the MVP. In production,
 SIS, catalogue, and degree-audit systems may be authoritative, but their
@@ -257,9 +255,6 @@ splitting.
 
 Recommended chunk metadata:
 
-<!-- coderabbit-ai-generated:v1 -->
-
-<!-- coderabbit-ai-generated-section:v1:6aa6b08e06bac4ea4fac6bbc95901c5195a6db4d356109f0a404ef3c434cee82 -->
 
 | Field | Purpose |
 | --- | --- |
@@ -277,7 +272,6 @@ Recommended chunk metadata:
 | `embedding_model` | Embedding model identifier |
 | `quality_status` | Validation status |
 
-<!-- /coderabbit-ai-generated:v1 -->
 
 Metadata supports filtering by course, reading, page, and content type,
 as well as citation generation and retrieval improvements.
@@ -351,9 +345,6 @@ rules.
 
 A practical PostgreSQL model:
 
-<!-- coderabbit-ai-generated:v1 -->
-
-<!-- coderabbit-ai-generated-section:v1:2b46fcb8295739b28b033af8590b93feced08d5f5f9208b0f2c0ec267462cafe -->
 
 | Table | Purpose |
 | --- | --- |
@@ -369,7 +360,6 @@ A practical PostgreSQL model:
 | `adviser_assignments` | Student/adviser relationship |
 | `ingestion_jobs` | Job ID, source key, status, error summary, timestamps |
 
-<!-- /coderabbit-ai-generated:v1 -->
 
 Use foreign keys and unique constraints. Preserve source JSON and
 checksums to trace structured records back to the input fixture.
@@ -461,9 +451,6 @@ institution.
 
 ## 10. AWS deployment mapping
 
-<!-- coderabbit-ai-generated:v1 -->
-
-<!-- coderabbit-ai-generated-section:v1:e3b5aedf345019182e605b79af20923bfefe55c2d5763530dcb2119044169db4 -->
 
 | Capability | Proposed MVP AWS component | Notes |
 | --- | --- | --- |
@@ -479,7 +466,7 @@ institution.
 | Observability | Amazon CloudWatch | Logs, metrics, alarms |
 | Infrastructure as code | AWS CDK v2 | Repeatable provisioning |
 
-<!-- /coderabbit-ai-generated:v1 -->
+
 
 This is a proposed mapping, not a claim that the services are already
 deployed. Validate quotas, regional availability, data residency,
@@ -487,9 +474,6 @@ networking, model access, and institutional security requirements.
 
 ## 11. Data acceptance tests
 
-<!-- coderabbit-ai-generated:v1 -->
-
-<!-- coderabbit-ai-generated-section:v1:628d945792ab0282c56988eac1e6bd7191df8a8474d3e12fffd506692e5a7b05 -->
 
 | Test | Expected result |
 | --- | --- |
@@ -508,7 +492,6 @@ networking, model access, and institutional security requirements.
 | Planning correctness | Eligibility and unit totals match deterministic rules |
 | Missing evidence | Application reports insufficient evidence rather than fabricating an answer |
 
-<!-- /coderabbit-ai-generated:v1 -->
 
 ## 12. MVP delivery sequence
 
