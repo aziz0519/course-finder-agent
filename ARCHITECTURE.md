@@ -21,6 +21,31 @@
 
 
 
+## UI and backend runtime
+
+These two views show the application as it runs locally today. The AWS diagram above remains the deployment target.
+
+### End-to-end view
+
+![UI and backend runtime overview](./docs/diagrams/architecture-overview.svg)
+
+The UI is a Gradio app, not Next.js. It keeps only a session cookie and a CSRF token, then calls the `/api/v1` surface over HTTP.
+FastAPI authenticates the session, derives the authorized student scope, and passes that scope into the agent layer.
+The supervisor delegates to three specialists, with the tutor using scoped retrieval, the planner using deterministic rules, and the context agent reading only the authorized student record.
+The on-demand worker ingests the supplied JSON and PDF fixtures into local SQLite and versioned artefacts.
+
+### Backend detail
+
+![Backend internals: authorized request path](./docs/diagrams/backend-internals.svg)
+
+
+Authorization runs before any agent tool executes.
+The conversation service owns thread state and the user's unit-cap preference, but authoritative academic data is re-read on every turn.
+The tutor is the only component that reads reading chunks and figure assets, and those reads are filtered by course and document scope.
+The planner calls the deterministic eligibility and degree-rule engine; a model may explain those results but may not change them.
+
+Editable diagram sources: [architecture-overview.html](./docs/diagrams/architecture-overview.html) and [backend-internals.html](./docs/diagrams/backend-internals.html).
+
 ## Security and Permission Boundaries
 
 * **WAF** - Web application firewall to prevent SQL injection and XSS
